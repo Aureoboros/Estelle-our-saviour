@@ -17,7 +17,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List;
 
-@TeleOp(name = "New Robot Teleop v2")
+@TeleOp(name = "Just Motion Code")
 public class JustMotion extends LinearOpMode {
     
     // ========== MOTOR POWER CONSTANTS ==========
