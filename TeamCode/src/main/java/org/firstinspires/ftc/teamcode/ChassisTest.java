@@ -10,8 +10,8 @@ import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-@TeleOp(name = "Chassis Test ONLY")
-public class ChassisTestTeleOp extends LinearOpMode {
+@TeleOp(name = "Chassis Test Only")
+public class ChassisTest extends LinearOpMode {
     
     // ========== MOTOR POWER CONSTANTS ==========
     private static final double SLOW_MODE_MULTIPLIER = 0.3;
