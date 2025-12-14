@@ -17,8 +17,8 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List;
 
-@TeleOp(name = "Full Robot Teleop v2")
-public class FullRobotTeleop extends LinearOpMode {
+@TeleOp(name = "EvilTesting")
+public class EvilTesting extends LinearOpMode {
     
     // ========== MOTOR POWER CONSTANTS ==========
     private static final double INTAKE_POWER = 1.0;
