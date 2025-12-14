@@ -21,8 +21,8 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 import java.util.List;
 
-@TeleOp(name = "Phase 2 - Limelight Fusion")
-public class Phase2LimelightTeleop extends LinearOpMode {
+@TeleOp(name = "Extra Zest Test")
+public class ExtraZestTest extends LinearOpMode {
     
     // ========== MOTOR POWER CONSTANTS ==========
     private static final double INTAKE_POWER = 1.0;
