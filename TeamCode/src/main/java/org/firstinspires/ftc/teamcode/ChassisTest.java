@@ -28,6 +28,20 @@ public class ChassisTest extends LinearOpMode {
     private static final double COUNTS_PER_REV = 2000.0;
     private static final double COUNTS_PER_INCH = COUNTS_PER_REV / (Math.PI * WHEEL_DIAMETER_INCHES);
     
+    // Odometry wheel positions (from center of robot)
+    // Forward wheel (yOdo): 3.35 inches LEFT, 1 inch BACK
+    // Sideways wheel (xOdo): 3.35 inches RIGHT, 1 inch BACK
+    private static final double Y_ODO_OFFSET_X = -3.35;  // Left is negative
+    private static final double Y_ODO_OFFSET_Y = -1.0;   // Back is negative
+    private static final double X_ODO_OFFSET_X = 3.35;   // Right is positive
+    private static final double X_ODO_OFFSET_Y = -1.0;   // Back is negative
+    
+    // Distance between the two odometry wheels for rotation calculation
+    private static final double TRACK_WIDTH = Math.sqrt(
+        Math.pow(X_ODO_OFFSET_X - Y_ODO_OFFSET_X, 2) + 
+        Math.pow(X_ODO_OFFSET_Y - Y_ODO_OFFSET_Y, 2)
+    );
+    
     // ========== STATE VARIABLES ==========
     private double robotX = 0.0;  // in inches
     private double robotY = 0.0;  // in inches
@@ -62,6 +76,7 @@ public class ChassisTest extends LinearOpMode {
         DcMotor backRightMotor = hardwareMap.dcMotor.get("backRightMotor");
         
         // Odometry encoders
+        // xOdo = sideways wheel (strafe), yOdo = forward wheel
         DcMotor xOdo = hardwareMap.dcMotor.get("xOdo");
         DcMotor yOdo = hardwareMap.dcMotor.get("yOdo");
         
@@ -109,6 +124,10 @@ public class ChassisTest extends LinearOpMode {
         telemetry.addData("Drive Motors", "✓");
         telemetry.addData("Odometry Wheels", "✓");
         telemetry.addData("IMU", "✓");
+        telemetry.addLine("========================================");
+        telemetry.addData("Track Width", "%.2f inches", TRACK_WIDTH);
+        telemetry.addData("Y Odo Position", "L:%.2f B:%.2f", -Y_ODO_OFFSET_X, -Y_ODO_OFFSET_Y);
+        telemetry.addData("X Odo Position", "R:%.2f B:%.2f", X_ODO_OFFSET_X, -X_ODO_OFFSET_Y);
         telemetry.addLine("========================================");
         telemetry.addLine("DPAD Controls:");
         telemetry.addLine("  UP = Normal Drive");
@@ -378,8 +397,8 @@ public class ChassisTest extends LinearOpMode {
             telemetry.addLine();
             
             telemetry.addLine("--- Encoder Counts ---");
-            telemetry.addData("X Odo", xOdo.getCurrentPosition());
-            telemetry.addData("Y Odo", yOdo.getCurrentPosition());
+            telemetry.addData("X Odo (Strafe)", xOdo.getCurrentPosition());
+            telemetry.addData("Y Odo (Forward)", yOdo.getCurrentPosition());
             telemetry.addData("FL Encoder", frontLeftMotor.getCurrentPosition());
             telemetry.addData("BL Encoder", backLeftMotor.getCurrentPosition());
             telemetry.addData("FR Encoder", frontRightMotor.getCurrentPosition());
@@ -404,19 +423,39 @@ public class ChassisTest extends LinearOpMode {
         int currentYCount = yOdo.getCurrentPosition();
         
         // Calculate change in counts
-        int deltaX = currentXCount - lastXOdoCount;
-        int deltaY = currentYCount - lastYOdoCount;
+        int deltaXCounts = currentXCount - lastXOdoCount;
+        int deltaYCounts = currentYCount - lastYOdoCount;
         
-        // Convert to inches
-        double deltaXInches = deltaX / COUNTS_PER_INCH;
-        double deltaYInches = deltaY / COUNTS_PER_INCH;
+        // Convert counts to inches of wheel movement
+        double deltaXInches = deltaXCounts / COUNTS_PER_INCH;  // Strafe movement
+        double deltaYInches = deltaYCounts / COUNTS_PER_INCH;  // Forward movement
         
-        // Update heading from IMU
-        robotHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+        // Get current heading from IMU
+        double currentHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
         
-        // Update global position (field-centric)
-        robotX += deltaXInches * Math.cos(robotHeading) - deltaYInches * Math.sin(robotHeading);
-        robotY += deltaXInches * Math.sin(robotHeading) + deltaYInches * Math.cos(robotHeading);
+        // Calculate change in heading
+        double deltaHeading = currentHeading - robotHeading;
+        
+        // Handle heading wraparound
+        while (deltaHeading > Math.PI) deltaHeading -= 2 * Math.PI;
+        while (deltaHeading < -Math.PI) deltaHeading += 2 * Math.PI;
+        
+        // Calculate the robot-centric displacement
+        // Account for rotation of the odometry wheels during turning
+        double robotCentricX = deltaXInches - (X_ODO_OFFSET_Y * deltaHeading);
+        double robotCentricY = deltaYInches - (Y_ODO_OFFSET_X * deltaHeading);
+        
+        // Use average heading for field-centric conversion
+        double avgHeading = robotHeading + (deltaHeading / 2.0);
+        
+        // Convert robot-centric movement to field-centric
+        double fieldDeltaX = robotCentricX * Math.cos(avgHeading) - robotCentricY * Math.sin(avgHeading);
+        double fieldDeltaY = robotCentricX * Math.sin(avgHeading) + robotCentricY * Math.cos(avgHeading);
+        
+        // Update global position
+        robotX += fieldDeltaX;
+        robotY += fieldDeltaY;
+        robotHeading = currentHeading;
         
         // Store current counts for next iteration
         lastXOdoCount = currentXCount;
