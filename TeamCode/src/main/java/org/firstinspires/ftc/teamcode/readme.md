@@ -5,23 +5,11 @@
 1. [Overview](#overview)
 2. [Program Comparison](#program-comparison)
 3. [ChassisTest - Diagnostic Mode](#chassistest---diagnostic-mode)
-   - [Hardware Requirements](#hardware-requirements-chassistest)
-   - [Core Features](#core-features-chassistest)
-   - [Test Modes](#test-modes)
-   - [Control Reference](#control-reference-chassistest)
-   - [Odometry System](#odometry-system-chassistest)
-   - [Use Cases](#use-cases-chassistest)
 4. [JustMotion - Competition Mode](#justmotion---competition-mode)
-   - [Hardware Requirements](#hardware-requirements-justmotion)
-   - [Core Features](#core-features-justmotion)
-   - [Speed Control System](#speed-control-system)
-   - [Control Reference](#control-reference-justmotion)
-   - [Odometry System](#odometry-system-justmotion)
-   - [Use Cases](#use-cases-justmotion)
 5. [Technical Specifications](#technical-specifications)
 6. [Configuration Guide](#configuration-guide)
 7. [Troubleshooting](#troubleshooting)
-8. [Best Practices](#best-practices)
+
 
 ---
 
