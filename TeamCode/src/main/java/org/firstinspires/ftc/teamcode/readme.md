@@ -1,706 +1,476 @@
-# FTC Robot TeleOp - Complete Control Guide
+# FTC Drive System - Complete Documentation
 
-##  Table of Contents
-1. [Chassis Test Mode](#chassis-test-mode)
-2. [Phase 1 - Full Robot TeleOp](#phase-1---full-robot-teleop)
-3. [Phase 2 - Limelight Fusion](#phase-2---limelight-fusion)
-4. [Quick Reference Cards](#quick-reference-cards)
+## Table of Contents
 
----
-
-#  Chassis Test Mode
-
-**TeleOp Name**: `Chassis Test ONLY`
-
-Use this mode to test and diagnose the drivetrain before running the full robot code.
-
-## Test Mode Selection (DPAD)
-
-| Button | Test Mode | What It Does |
-|--------|-----------|--------------|
-| **DPAD UP** | Normal Drive | Full mecanum drive with all 4 motors working together |
-| **DPAD DOWN** | Individual Motors | Cycles through testing one motor at a time (FL → BL → FR → BR) |
-| **DPAD LEFT** | Motor Pairs (Front/Back) | Tests front pair (FL+FR) or back pair (BL+BR) together |
-| **DPAD RIGHT** | Motor Sides (Left/Right) | Tests left side (FL+BL) or right side (FR+BR) together |
-
-## Control Inputs
-
-### Normal Drive Mode (DPAD UP selected)
-| Control | Function |
-|---------|----------|
-| **Left Stick Y** | Forward/Backward |
-| **Right Stick X** | Strafe Left/Right |
-| **Left Trigger (LT)** | Rotate Left |
-| **Right Trigger (RT)** | Rotate Right |
-| **START** | Toggle Slow Mode (30%) |
-
-### Test Modes (DPAD DOWN/LEFT/RIGHT selected)
-| Control | Function |
-|---------|----------|
-| **Left Stick Y** | Control active motor(s) forward/backward |
-| **DPAD DOWN** | Cycle to next individual motor |
-| **DPAD LEFT** | Switch between front/back pairs |
-| **DPAD RIGHT** | Switch between left/right sides |
-
-### Universal Controls (All Modes)
-| Button | Function |
-|--------|----------|
-| **A** | Emergency Stop (all motors to 0) |
-| **BACK** | Reset IMU and Odometry to zero |
-
-## Telemetry Display
-
-The driver station shows:
-- **Current Test Mode**: Which motors are being tested
-- **Active Motors**: Marked with arrows (◄◄◄) next to their power values
-- **Motor Powers**: All 4 drive motors (FL, BL, FR, BR)
-- **Encoder Counts**: 
-  - Drive motors: FL, BL, FR, BR encoders
-  - Odometry wheels: X Odo, Y Odo (if equipped)
-- **Position (Odometry)**:
-  - X Position (inches)
-  - Y Position (inches)
-  - Heading (degrees)
-
-## Testing Checklist
-
-### Step 1: Individual Motor Test
-1. Press **DPAD DOWN** to enter individual motor mode
-2. Use **Left Stick Y** to test Front Left motor
-3. Verify motor spins in correct direction
-4. Press **DPAD DOWN** again to cycle to Back Left
-5. Repeat for all 4 motors
-6. **Expected**: Each motor spins independently in correct direction
-
-### Step 2: Motor Pairs Test
-1. Press **DPAD LEFT** to test Front Pair
-2. Both front motors should spin together
-3. Press **DPAD LEFT** again to test Back Pair
-4. Both back motors should spin together
-5. **Expected**: Pairs spin synchronously
-
-### Step 3: Side Test
-1. Press **DPAD RIGHT** to test Left Side
-2. FL and BL should spin together
-3. Press **DPAD RIGHT** again to test Right Side
-4. FR and BR should spin together
-5. **Expected**: Sides spin synchronously
-
-### Step 4: Full Drive Test
-1. Press **DPAD UP** for normal drive mode
-2. Test forward/backward movement (Left Stick Y)
-3. Test strafing left/right (Right Stick X)
-4. Test rotation (LT/RT triggers)
-5. **Expected**: Robot moves smoothly in all directions
-
-### Step 5: Odometry Verification (if equipped)
-1. Press **BACK** to reset position to (0, 0)
-2. Drive forward 24 inches
-3. Check telemetry - Y Position should show ~24 inches
-4. Strafe right 24 inches
-5. Check telemetry - X Position should show ~24 inches
-6. **Expected**: Odometry tracks position accurately (±2 inches)
-
-## Common Issues & Solutions
-
-| Issue | Likely Cause | Solution |
-|-------|--------------|----------|
-| Motor doesn't spin | Wiring disconnected | Check motor port connection |
-| Motor spins backwards | Motor direction reversed | Flip motor direction in code |
-| Encoder count not changing | Encoder cable loose | Check encoder connection |
-| Robot drifts during forward | Motors unbalanced | Check motor power equality |
-| Odometry position wrong | Wheel diameter incorrect | Verify deadwheel size |
-| Robot won't move | Emergency stop active | Press A button to clear |
+1. [Overview](#overview)
+2. [Program Comparison](#program-comparison)
+3. [ChassisTest - Diagnostic Mode](#chassistest---diagnostic-mode)
+   - [Hardware Requirements](#hardware-requirements-chassistest)
+   - [Core Features](#core-features-chassistest)
+   - [Test Modes](#test-modes)
+   - [Control Reference](#control-reference-chassistest)
+   - [Odometry System](#odometry-system-chassistest)
+   - [Use Cases](#use-cases-chassistest)
+4. [JustMotion - Competition Mode](#justmotion---competition-mode)
+   - [Hardware Requirements](#hardware-requirements-justmotion)
+   - [Core Features](#core-features-justmotion)
+   - [Speed Control System](#speed-control-system)
+   - [Control Reference](#control-reference-justmotion)
+   - [Odometry System](#odometry-system-justmotion)
+   - [Use Cases](#use-cases-justmotion)
+5. [Technical Specifications](#technical-specifications)
+6. [Configuration Guide](#configuration-guide)
+7. [Troubleshooting](#troubleshooting)
+8. [Best Practices](#best-practices)
 
 ---
 
-#  Phase 1 - Full Robot TeleOp
+## Overview
 
-**TeleOp Name**: `Full Robot Teleop v2`
+This documentation covers two complementary FTC (FIRST Tech Challenge) robot control programs designed for mecanum drive robots:
 
-Complete robot control with all mechanisms (intake, launcher, turret, spindexer, armor).
+- **ChassisTest**: Comprehensive diagnostic and testing tool
+- **JustMotion**: Streamlined competition driving program
 
-## Control Layout
-
-### Button Controls (Both Gamepads)
-All buttons use **rising edge detection** - press once for one action.
-
-| Button | Function | Details |
-|--------|----------|---------|
-| **B** | Intake Toggle | Starts/stops intake motor. Automatically rotates spindexer servo 120° twice (300ms delay between) |
-| **X** | Aim & Shoot | Toggles launch sequence. Spins up launcher and activates turret auto-aim to alliance AprilTag. Press again to stop. |
-| **Y** | Reverse Intake | Reverses intake motor direction (only works when intake is active) |
-| **A** | Emergency Stop | Immediately stops ALL mechanisms (intake, launcher, turret, armor) |
-| **LEFT BUMPER (LB)** | Armor Toggle  | Deploy/retract armor plates for stable shooting position |
-| **RIGHT BUMPER (RB)** | *(Available)* | Reserved for Phase 2 |
-| **START** | Slow Mode Toggle | Reduces drive speed to 30% for precise movements |
-| **BACK** | Reset Position | Resets IMU heading and odometry position to (0, 0) |
-| **DPAD UP** | Select Blue Alliance | Sets target AprilTag to ID 20 (Blue) |
-| **DPAD DOWN** | Select Red Alliance | Sets target AprilTag to ID 24 (Red) |
-| **DPAD LEFT** | Decrease Launch Power | Reduces launcher speed by 5%. Wraps from 50% to 100% |
-| **DPAD RIGHT** | Increase Launch Power | Increases launcher speed by 5%. Wraps from 100% to 50% |
-
-### Joystick & Trigger Controls
-
-| Control | Function | Details |
-|---------|----------|---------|
-| **Left Stick Y** | Forward/Backward | Push up to move forward, down to move backward |
-| **Right Stick X** | Strafe Left/Right | Push left to strafe left, right to strafe right |
-| **Left Trigger (LT)** | Rotate Left | Proportional rotation counter-clockwise |
-| **Right Trigger (RT)** | Rotate Right | Proportional rotation clockwise |
+Both programs support dual-driver operation, odometry-based position tracking, and IMU integration for heading measurement.
 
 ---
 
-## 🤖 Robot Mechanisms (Phase 1)
+## Program Comparison
 
-### **Alliance Selection**  **Set This First!**
-- **DPAD UP**: Select **Blue Alliance** (targets AprilTag 20)
-- **DPAD DOWN**: Select **Red Alliance** (targets AprilTag 24)
-- Alliance selection determines which AprilTag the turret aims at
-- Default: Blue (Tag 20) if none selected
-
-### **Launch Power Adjustment**
-- **DPAD RIGHT**: Increase launch power by 5%
-- **DPAD LEFT**: Decrease launch power by 5%
-- **Range**: 50% to 100% (adjustable in 5% increments)
-- **Wrap-around**: Pressing RIGHT at 100% → 50%, pressing LEFT at 50% → 100%
-- **Default**: 75% power
-- Changes apply immediately if launcher is running
-
-### **Armor System** 
-- **LEFT BUMPER (LB)**: Toggle armor deployment
-- **Deploy**: Motors continuously push plates down to ground (40% power)
-- **Retract**: Strong pulse (80% reverse) for 500ms, then stop
-- **Purpose**: Create stable base when shooting to resist being pushed
-- Use before shooting for maximum stability
-
-### **Intake System**
-- **Motor**: `intakeMotor` - runs at 100% power
-- **Spindexer Servo**: Automatically indexes 120° twice during intake activation
-  - Position 1: 0.0 (0°)
-  - Position 2: 0.33 (120°)
-  - Position 3: 0.67 (240°)
-  - Delay: 300ms between rotations
-
-### **Launch System**
-- **Motor**: `launchMotor` - runs at adjustable power (50%-100%)
-- **Default Power**: 75%
-- **Turret Servo**: Continuous rotation servo for auto-aiming
-  - Auto-aims to alliance-specific AprilTag (Red: 24, Blue: 20)
-  - Searches 360° if tag not found (3 second timeout)
-  - Returns to center (forward) if tag not detected
-  - Aiming tolerance: ±3°
-
-### **Drive System**
-- **Type**: Mecanum drive (holonomic)
-- **Max Speed**: 50% power (for both Gamepad 1 & 2)
-- **Slow Mode**: 30% of normal speed (15% max power)
-- **Odometry**: Real-time position tracking using drive motor encoders
+| Feature | ChassisTest | JustMotion |
+|---------|-------------|------------|
+| **Primary Purpose** | Testing & Diagnostics | Competition Driving |
+| **Test Modes** | 9 modes (individual motors, pairs, sides) | None - drive only |
+| **Speed Options** | Slow mode toggle only | 3 presets + slow mode |
+| **Field-Centric** | ❌ No | ✅ Yes (toggle) |
+| **Odometry Type** | Dedicated wheels (2-wheel) | Drive motor encoders |
+| **Driver 1 Power** | 50% max | 100% max |
+| **Driver 2 Power** | 50% max | 50% max |
+| **DPAD Function** | Mode selection | Precision movement |
+| **Emergency Stop** | ✅ A button | ❌ No |
+| **Heading Reset** | Full reset only | Full or heading-only |
+| **Best For** | Hardware testing, calibration, diagnostics | Matches, practice driving |
 
 ---
 
-##  Position Tracking (Phase 1)
+## ChassisTest - Diagnostic Mode
 
-The robot continuously tracks its position using:
-- **Drive Motor Encoders**: Tracks all movement (4-wheel odometry)
-- **IMU**: Tracks heading (rotation angle)
+### Hardware Requirements (ChassisTest)
 
-**Position Data:**
-- X Position (inches) - left/right displacement from start
-- Y Position (inches) - forward/backward displacement from start
-- Heading (degrees) - rotation angle from start orientation
+#### Required Components
+- **4 Drive Motors**: `frontLeftMotor`, `backLeftMotor`, `frontRightMotor`, `backRightMotor`
+- **2 Odometry Encoders**: `xOdo` (strafe/sideways), `yOdo` (forward/back)
+- **IMU Sensor**: REV Hub IMU configured as `imu`
+- **Control Hub**: REV Robotics Control Hub or Expansion Hub
 
-**Accuracy**: ±2-4 inches over short distances, accumulates drift over time
-
-**Reset Position**: Press BACK button to reset all to zero
-
----
-
-##  Auto-Aim Feature (Phase 1)
-
-### **Alliance Setup (REQUIRED)**
-Before starting, select your alliance:
-- **DPAD UP** = Blue Alliance → targets AprilTag 20
-- **DPAD DOWN** = Red Alliance → targets AprilTag 24
-
-### **Launch Sequence**
-When **X button** is pressed to activate launch mode:
-
-1. **Launcher spins up** at current power setting (50-100%)
-2. **Turret begins searching** for alliance-specific AprilTag
-3. **If tag detected**:
-   - Turret aims proportionally (corrects yaw error)
-   - Locks on when within ±3° of target
-   - Status shows "LOCKED" with angle offset
-4. **If tag NOT detected**:
-   - Turret rotates 360° searching for tag
-   - After 3 seconds, returns to forward position
-   - Status shows "SEARCHING..." then "TARGET LOST"
-
-**Targets**:
-- **Red Alliance**: AprilTag ID 24
-- **Blue Alliance**: AprilTag ID 20 (default)
-
----
-
-#  Phase 2 - Limelight Fusion
-
-**TeleOp Name**: `Phase 2 - Limelight Fusion`
-
-Advanced positioning with triple-source fusion and auto-navigation.
-
-## New Features in Phase 2
-
-### **Triple-Source Position Fusion** 
-Phase 2 intelligently combines three positioning sources:
-
-1. **Drive Encoder Odometry** (continuous baseline)
-   - Tracks all robot movement
-   - Updates every loop (~50Hz)
-   - Accumulates drift over time
-
-2. **Limelight Vision** (fast correction)
-   - Absolute position from vision target
-   - Fast updates (30-60Hz)
-   - Corrects odometry drift automatically
-
-3. **AprilTag Vision** (verification)
-   - High-accuracy absolute position
-   - Cross-checks Limelight data
-   - Backup when Limelight unavailable
-
-### **Intelligent Fusion Algorithm**
-The system automatically:
-- ✅ Detects drift between odometry and vision
-- ✅ Corrects position with vision data
-- ✅ Tracks position confidence (0-100%)
-- ✅ Detects when robot is pushed
-- ✅ Cross-validates vision sources
-- ✅ Warns when position unreliable
-
----
-
-## Control Layout (Phase 2)
-
-### **NEW Controls**
-
-| Button | Function | Details |
-|--------|----------|---------|
-| **RIGHT BUMPER (RB)** | Auto-Navigate | Automatically drives to scoring position near alliance AprilTag. Press again or use joystick to cancel. |
-
-### **All Other Controls**: Same as Phase 1
-- **B** = Intake toggle
-- **X** = Aim & shoot
-- **Y** = Reverse intake
-- **A** = Emergency stop (also cancels auto-nav)
-- **LB** = Armor toggle
-- **START** = Slow mode toggle
-- **BACK** = Reset all positioning
-- **DPAD UP/DOWN** = Alliance selection
-- **DPAD LEFT/RIGHT** = Launch power adjustment
-- **Left Stick Y** = Forward/backward (overrides auto-nav)
-- **Right Stick X** = Strafe left/right (overrides auto-nav)
-- **LT/RT** = Rotate left/right (overrides auto-nav)
-
----
-
-##  Position Fusion System
-
-### **How It Works**
-
+#### Hardware Configuration
 ```
-┌─────────────────────────────────────────────┐
-│      POSITION ESTIMATION SYSTEM             │
-├─────────────────────────────────────────────┤
-│                                             │
-│  1. Drive Encoders (Continuous)             │
-│     └─ Always tracking, may drift           │
-│                                             │
-│  2. Limelight Vision (Fast Correction)      │
-│     └─ Corrects drift when target visible   │
-│                                             │
-│  3. AprilTag (Verification)                 │
-│     └─ Cross-checks Limelight accuracy      │
-│                                             │
-│  → FUSED POSITION (Best Estimate)           │
-│     └─ Displayed in telemetry               │
-└─────────────────────────────────────────────┘
+Device Name         | Type           | Port
+--------------------|----------------|------
+frontLeftMotor      | DC Motor       | Motor Port 0
+backLeftMotor       | DC Motor       | Motor Port 1
+frontRightMotor     | DC Motor       | Motor Port 2
+backRightMotor      | DC Motor       | Motor Port 3
+xOdo                | DC Motor       | Motor Port (encoder only)
+yOdo                | DC Motor       | Motor Port (encoder only)
+imu                 | IMU            | I2C Port 0
 ```
 
-### **Correction Modes**
+### Core Features (ChassisTest)
 
-| Drift Amount | Action | Description |
-|--------------|--------|-------------|
-| < 2 inches | Trust Odometry | Good agreement, keep current estimate |
-| 2-6 inches | Blend | Mix 70% odometry + 30% vision |
-| > 6 inches | Hard Reset | Large drift, reset to vision position |
+#### Dual-Driver Mecanum Control
+- Two gamepads can operate the robot simultaneously
+- Automatic driver detection based on joystick activity
+- Both drivers limited to 50% maximum power
+- Independent control with smooth handoff between drivers
 
-### **Confidence Tracking**
+#### Position Tracking
+- **Two-wheel odometry system** with dedicated encoder wheels
+- Real-time position display (X, Y in inches)
+- Heading display in degrees
+- Accounts for odometry wheel offset from robot center
+- Compensates for rotation effects during turns
 
-- **Starts at**: 100% confidence
-- **Decays**: 2% per loop without vision correction
-- **Restored**: +10-15% when vision correction applied
-- **Low confidence** (<50%): Position may be inaccurate
+#### Safety Features
+- **Emergency stop** via A button (stops all motors immediately)
+- **Brake mode** when motors idle
+- **10% joystick deadzone** to prevent drift
+- Visual indicators for active motors in test modes
 
-### **Push Detection**
+### Test Modes
 
-The system detects when your robot is unexpectedly moved:
-1. Monitors odometry vs vision when motors idle
-2. If position changes >3 inches without motor input
-3. Alerts " ROBOT WAS PUSHED!"
-4. Auto-corrects position to vision
+ChassisTest includes 9 distinct operating modes:
 
-### **Vision Cross-Validation**
+#### 1. Normal Drive Mode
+Standard mecanum drive with all four wheels operational.
+- **Controls**: Left stick Y (forward/back), Right stick X (strafe), Triggers (rotate)
+- **Status**: Default mode on startup
 
-When both Limelight and AprilTag are visible:
-- System compares their position estimates
-- If they disagree by >8 inches:
-  - Warns " VISION CONFLICT"
-  - Trusts AprilTag (more accurate)
-  - Resets odometry to AprilTag position
+#### 2-5. Individual Motor Tests
+Test each motor independently using left stick Y axis.
+- **TEST_FRONT_LEFT**: Front left motor only
+- **TEST_BACK_LEFT**: Back left motor only  
+- **TEST_FRONT_RIGHT**: Front right motor only
+- **TEST_BACK_RIGHT**: Back right motor only
+- **Indicator**: Active motor marked with `◄◄◄` in telemetry
 
----
+#### 6-7. Motor Pair Tests
+Test front or back motor pairs together.
+- **TEST_FRONT_PAIR**: Both front motors
+- **TEST_BACK_PAIR**: Both back motors
 
-##  Auto-Navigation Feature
+#### 8-9. Side Tests
+Test left or right side motors together.
+- **TEST_LEFT_SIDE**: Front left + back left
+- **TEST_RIGHT_SIDE**: Front right + back right
 
-### **How to Use**
+### Control Reference (ChassisTest)
 
-1. **Set Alliance** (DPAD UP/DOWN)
-2. **Position robot** where you can see alliance AprilTag
-3. **Press RIGHT BUMPER (RB)**
-   - Robot calculates path to scoring position
-   - Drives automatically to target
-   - Status shows distance and target coordinates
+#### Gamepad 1 & 2 (Both Controllers)
 
-4. **To Cancel**:
-   - Press RB again, OR
-   - Move joystick (driver override), OR
-   - Press A (emergency stop)
+| Control | Function | Mode |
+|---------|----------|------|
+| **Left Stick Y** | Forward/Backward | Normal + Test modes |
+| **Right Stick X** | Strafe Left/Right | Normal mode only |
+| **Left Trigger** | Rotate Left | Normal mode only |
+| **Right Trigger** | Rotate Right | Normal mode only |
+| **DPAD UP** | Switch to Normal Drive | All modes |
+| **DPAD DOWN** | Cycle Individual Motor Tests | All modes |
+| **DPAD LEFT** | Cycle Motor Pair Tests | All modes |
+| **DPAD RIGHT** | Cycle Side Tests | All modes |
+| **START** | Toggle Slow Mode (30%) | All modes |
+| **BACK** | Reset IMU + Odometry | All modes |
+| **A Button** | Emergency Stop All Motors | All modes |
 
-### **Target Calculation**
+### Odometry System (ChassisTest)
 
-The robot navigates to a scoring position:
-- **12 inches** to the side of AprilTag
-- **24 inches** in front of AprilTag
-- Adjust these offsets in code based on your robot
-
-### **Auto-Nav Behavior**
-
-- **Speed**: Slows down as it approaches target
-- **Tolerance**: Stops within 4 inches of target
-- **Heading**: Rotates to face scoring direction
-- **Override**: Any joystick input cancels auto-nav immediately
-
----
-
-## 📱 Enhanced Telemetry (Phase 2)
-
-### **Position Fusion Section**
-- **Position**: Current X, Y coordinates
-- **Heading**: Robot rotation angle
-- **Source**: Which source is being used
-  - `ODOMETRY` = Trusting drive encoders
-  - `LIMELIGHT` = Using Limelight correction
-  - `APRILTAG` = Using AprilTag correction
-  - `FUSED` = Blending multiple sources
-- **Confidence**: 0-100% position reliability
-- ** Drift**: Warning if odometry drifts >3"
-
-### **Vision Status Section**
-- **Limelight**: 
-  - "✓ Target Locked" with TX, TY coordinates
-  - "No Target" if nothing visible
-- **AprilTag**:
-  - "✓ ID [#] visible" with tag number
-  - "No Target" if nothing visible
-
-### **Auto-Navigation Section** (when active)
-- **Target**: Destination X, Y coordinates
-- **Distance**: How far to target in inches
-- **Note**: "(Driver input to cancel)"
-
-### **All Other Sections**: Same as Phase 1
-- Alliance, driver, slow mode
-- Mechanisms (intake, launch, armor, turret, spindexer)
-- Motor powers
-
----
-
-## 🔧 Technical Constants
-
-### Drive Configuration
+#### Configuration Details
 ```java
-GAMEPAD1_MAX_POWER = 0.5  // 50% max speed
-GAMEPAD2_MAX_POWER = 0.5  // 50% max speed
-SLOW_MODE_MULTIPLIER = 0.3  // 30% in slow mode
-JOYSTICK_DEADZONE = 0.1  // 10% deadzone
+Wheel Diameter: 32mm (1.26 inches)
+Encoder Resolution: 2000 counts per revolution
+Counts per Inch: ~500 counts
+
+Y Odometry Wheel Position:
+  - 3.35 inches LEFT of center
+  - 1 inch BACK from center
+  
+X Odometry Wheel Position:
+  - 3.35 inches RIGHT of center
+  - 1 inch BACK from center
+
+Calculated Track Width: 6.7 inches
 ```
 
-### Odometry Configuration
+#### Odometry Algorithm
+1. Read encoder deltas from both odometry wheels
+2. Convert counts to inches of wheel movement
+3. Account for wheel offset during robot rotation
+4. Calculate robot-centric displacement
+5. Convert to field-centric using IMU heading
+6. Update global X, Y, heading values
+
+### Use Cases (ChassisTest)
+
+✅ **When to Use ChassisTest:**
+- Initial robot setup and motor direction verification
+- Diagnosing mechanical issues (wheels not moving, grinding)
+- Testing individual motor functionality
+- Calibrating odometry wheel positions
+- Verifying encoder connections and readings
+- Training new drivers on basic controls
+- Pre-competition hardware checkout
+
+❌ **Not Ideal For:**
+- Actual competition matches
+- High-speed driving practice
+- Field-centric driving training
+
+---
+
+## JustMotion - Competition Mode
+
+### Hardware Requirements (JustMotion)
+
+#### Required Components
+- **4 Drive Motors**: `frontLeftMotor`, `backLeftMotor`, `frontRightMotor`, `backRightMotor` (with encoders)
+- **IMU Sensor**: REV Hub IMU configured as `imu`
+- **Control Hub**: REV Robotics Control Hub or Expansion Hub
+
+#### Hardware Configuration
+```
+Device Name         | Type           | Port
+--------------------|----------------|------
+frontLeftMotor      | DC Motor       | Motor Port 0
+backLeftMotor       | DC Motor       | Motor Port 1
+frontRightMotor     | DC Motor       | Motor Port 2
+backRightMotor      | DC Motor       | Motor Port 3
+imu                 | IMU            | I2C Port 0
+```
+
+**Note**: JustMotion uses drive motor encoders for odometry, eliminating the need for separate odometry wheels.
+
+### Core Features (JustMotion)
+
+#### Advanced Speed Control
+- **Three speed presets**: Slow (30%), Medium (60%), Fast (100%)
+- **Slow mode override**: START button forces 30% speed
+- **Per-driver power limits**: Driver 1 at 100%, Driver 2 at 50%
+- **Precision DPAD control**: 30% power for fine adjustments
+
+#### Field-Centric Driving
+- Toggle between robot-centric and field-centric modes
+- In field-centric: forward always moves toward opponent's side
+- Essential for consistent driving regardless of robot orientation
+- Uses IMU heading for coordinate transformation
+
+#### Flexible Resets
+- **Full reset** (BACK): Position, heading, and encoders
+- **Heading-only reset** (Left Bumper): Realign field-centric reference
+- **Snap to 0°** (Right Bumper): Quick forward alignment (placeholder)
+
+### Speed Control System
+
+#### Speed Preset Matrix
+
+| Mode | Button | Forward/Strafe | Rotation | Use Case |
+|------|--------|----------------|----------|----------|
+| **SLOW** | A | 30% | 30% | Precise scoring, alignment |
+| **MEDIUM** | B | 60% | 60% | Controlled navigation |
+| **FAST** | X | 100% | 100% | Transit, repositioning |
+| **Slow Mode** | START | 30% | 30% | Emergency precision (overrides preset) |
+
+#### DPAD Precision Control
+- Fixed 30% power output regardless of preset
+- Overrides joystick input when active
+- Directions: UP (forward), DOWN (back), LEFT/RIGHT (strafe)
+
+### Control Reference (JustMotion)
+
+#### Gamepad 1 (Primary Driver)
+
+| Control | Function | Notes |
+|---------|----------|-------|
+| **Left Stick Y** | Forward/Backward | Inverted from typical |
+| **Right Stick X** | Strafe Left/Right | |
+| **Left Trigger** | Rotate Left | Analog control |
+| **Right Trigger** | Rotate Right | Analog control |
+| **DPAD UP** | Precise Forward | 30% power |
+| **DPAD DOWN** | Precise Backward | 30% power |
+| **DPAD LEFT** | Precise Strafe Left | 30% power |
+| **DPAD RIGHT** | Precise Strafe Right | 30% power |
+| **A Button** | Speed: SLOW (30%) | Preset selection |
+| **B Button** | Speed: MEDIUM (60%) | Preset selection |
+| **X Button** | Speed: FAST (100%) | Preset selection |
+| **Y Button** | Toggle Field-Centric | Changes control mode |
+| **START** | Toggle Slow Mode | Overrides preset |
+| **BACK** | Reset Position + Heading | Full reset |
+| **Left Bumper** | Reset Heading Only | For field-centric |
+| **Right Bumper** | Snap to 0° | (Future feature) |
+
+#### Gamepad 2 (Secondary Driver)
+- All controls identical to Gamepad 1
+- Limited to 50% maximum power
+- Useful for co-driver during endgame
+
+### Odometry System (JustMotion)
+
+#### Configuration Details
 ```java
-COUNTS_PER_MOTOR_REV = 537.7  // REV HD Hex Motor
-WHEEL_DIAMETER = 4.0 inches
-COUNTS_PER_INCH = 42.79
+Motor Type: REV HD Hex Motor
+Encoder Resolution: 537.7 counts per revolution
+Gear Reduction: 1.0 (direct drive)
+Wheel Diameter: 4.0 inches
+Counts per Inch: ~42.9 counts
 ```
 
-### Position Fusion Configuration
+#### Drive Encoder Odometry Algorithm
+1. Read all four drive motor encoder deltas
+2. Calculate average forward movement: `(FL + BL + FR + BR) / 4`
+3. Calculate average strafe movement: `(-FL + BL + FR - BR) / 4`
+4. Convert counts to inches
+5. Use IMU heading for field-centric transformation
+6. Update global X, Y position
+
+**Advantages:**
+- No additional hardware required
+- Simple setup
+
+**Disadvantages:**
+- Less accurate during wheel slip
+- Cannot distinguish between intended and unintended movement
+
+### Use Cases (JustMotion)
+
+✅ **When to Use JustMotion:**
+- Competition matches (qualification, playoff, finals)
+- Driver practice sessions
+- Field-centric driving training
+- Multi-speed driving practice
+- Situations requiring precision and speed flexibility
+- When dedicated odometry wheels aren't available
+
+✅ **Recommended Configurations:**
+- **Beginner drivers**: Start with MEDIUM preset, slow mode available
+- **Experienced drivers**: FAST preset, field-centric enabled
+- **Precision tasks**: Use DPAD controls for fine positioning
+- **Endgame**: Driver 2 takes over at 50% power for careful maneuvers
+
+---
+
+## Technical Specifications
+
+### Common Constants
+
 ```java
-VISION_CORRECTION_LARGE = 6.0 inches  // Hard reset threshold
-VISION_CORRECTION_SMALL = 2.0 inches  // Blend threshold
-VISION_BLEND_RATIO = 0.3  // 30% vision, 70% odometry
-CONFIDENCE_DECAY = 0.02  // 2% per loop
-PUSH_DETECTION = 3.0 inches  // Unexpected movement
-AUTO_NAV_SPEED = 0.25  // 25% max speed
-AUTO_NAV_TOLERANCE = 4.0 inches  // Stop within 4"
+JOYSTICK_DEADZONE = 0.1 (10%)
+SLOW_MODE_MULTIPLIER = 0.3 (30%)
 ```
 
-### Servo Configuration
+### IMU Configuration
+
 ```java
-SPINDEXER_DELAY = 300ms
-TURRET_SEARCH_SPEED = 0.3
-TURRET_AIM_SPEED = 0.15
-TURRET_SEARCH_TIMEOUT = 3.0 seconds
-ANGLE_TOLERANCE = ±3°
+Logo Facing: LEFT
+USB Facing: FORWARD
+Angle Unit: RADIANS (internal), DEGREES (display)
 ```
 
-### Launch Motor Configuration
+### Motor Configuration
+
 ```java
-LAUNCH_MOTOR_MIN = 0.5  // 50% minimum
-LAUNCH_MOTOR_MAX = 1.0  // 100% maximum
-LAUNCH_MOTOR_STEP = 0.05  // 5% per button press
-DEFAULT_POWER = 0.75  // 75% starting power
+Direction: All motors set to FORWARD
+Run Mode: RUN_WITHOUT_ENCODER (power control)
+Zero Power Behavior: BRAKE
 ```
 
-### Armor Configuration
+### Mecanum Drive Kinematics
+
 ```java
-ARMOR_DEPLOY_POWER = 0.4  // 40% continuous
-ARMOR_RETRACT_POWER = -0.8  // 80% reverse pulse
-ARMOR_RETRACT_TIME = 500ms
-```
+frontLeftPower  = -y + x + rx
+backLeftPower   = -y - x + rx
+frontRightPower = -y - x - rx
+backRightPower  = -y + x - rx
 
-### AprilTag Configuration
-```java
-RED_APRILTAG_ID = 24
-BLUE_APRILTAG_ID = 20
-```
-
----
-
-##  Important Notes
-
-### Driver Priority
-- **Gamepad 1 has priority** over Gamepad 2
-- If both gamepads give input, Gamepad 1 controls are used
-- Both gamepads can activate mechanisms (buttons)
-
-### Rising Edge Detection
-- ✅ **ALL buttons and DPAD directions** use rising edge detection
-- One button press = one action (no repeating)
-- Toggle states preserved (intake/launch stay active until toggled off)
-- DPAD adjustments increment/decrement by one step per press
-
-### Safety Features
-- **A button** emergency stops ALL mechanisms instantly (including auto-nav)
-- **Brake mode** enabled on all motors (stops quickly when no input)
-- **Power limits** prevent motor damage (max 50% drive power)
-- **Driver override** - any joystick input cancels auto-navigation
-
-### Position Accuracy (Phase 2)
-
-| Scenario | Expected Accuracy | Primary Source |
-|----------|------------------|----------------|
-| Vision available, stationary | ±1-2 inches | Limelight/AprilTag |
-| Vision available, moving | ±2-3 inches | Fused |
-| No vision, short distance (<10 ft) | ±2-4 inches | Odometry |
-| No vision, long distance (>20 ft) | ±6-12 inches | Odometry (drifted) |
-| After vision correction | ±1-2 inches | Reset to vision |
-
----
-
-## 📋 Pre-Match Checklist
-
-### **Before Every Match:**
-
-#### 1. Hardware Check
-- ✅ Run **Chassis Test** to verify all motors working
-- ✅ Check camera connections (Limelight + AprilTag webcam)
-- ✅ Verify Limelight is connected (telemetry shows "✓ CONNECTED")
-- ✅ Test armor deployment (LB button)
-
-#### 2. Software Setup
-- ✅ **Select alliance** (DPAD UP for Blue, DPAD DOWN for Red)
-- ✅ **Adjust launch power** if needed (DPAD LEFT/RIGHT, default 75%)
-- ✅ **Press BACK** at starting position to reset odometry to (0, 0)
-- ✅ Verify position confidence is 100%
-
-#### 3. Vision Verification
-- ✅ Point robot at alliance AprilTag
-- ✅ Verify telemetry shows "✓ Target Locked"
-- ✅ Check that position updates when moved
-- ✅ Confirm auto-aim works (press X near tag)
-
-#### 4. Mechanism Test
-- ✅ Test intake (B button) - should rotate spindexer
-- ✅ Test launcher (X button) - should spin up and aim
-- ✅ Test armor (LB button) - should deploy smoothly
-- ✅ Test auto-nav (RB button) - should calculate target
-
-#### 5. Final Verification
-- ✅ Check telemetry shows correct alliance
-- ✅ Verify slow mode toggle works (START)
-- ✅ Test emergency stop (A button)
-- ✅ Ready for match! 
-
----
-
-### **Troubleshooting During Match:**
-
-| Issue | Solution |
-|-------|----------|
-| Robot not moving | Press **A** to clear emergency stop |
-| Wrong AprilTag targeted | Press **DPAD UP** or **DOWN** to select correct alliance |
-| Launcher too weak/strong | Press **DPAD LEFT/RIGHT** to adjust (live adjustment) |
-| Turret can't find tag | Position robot to see AprilTag clearly |
-| Position tracking off | Press **BACK** to reset odometry |
-| Low confidence warning | Drive near AprilTag to restore vision correction |
-| "Vision Conflict" warning | System auto-correcting, continue normally |
-| "Robot Was Pushed" alert | System auto-corrected position |
-| Auto-nav not working | Ensure alliance selected and AprilTag visible |
-| Armor won't retract | Press **A** (emergency stop), then LB again |
-
----
-
-#  Quick Reference Cards
-
-## Chassis Test Quick Reference
-```
-╔═══════════════════════════════════════════════════════════════╗
-║                    CHASSIS TEST CONTROLS                       ║
-╠═══════════════════════════════════════════════════════════════╣
-║  MODE SELECTION:                                               ║
-║    DPAD ↑ = Normal Drive         DPAD ↓ = Individual Motors   ║
-║    DPAD ← = Motor Pairs          DPAD → = Sides               ║
-║                                                                ║
-║  NORMAL DRIVE:                                                 ║
-║    Left Stick Y = Forward/Back   Right Stick X = Strafe L/R   ║
-║    LT/RT = Rotate Left/Right                                  ║
-║                                                                ║
-║  TEST MODE:                                                    ║
-║    Left Stick Y = Control Active Motor(s)                     ║
-║                                                                ║
-║  UNIVERSAL:                                                    ║
-║    A = Emergency Stop            BACK = Reset Position        ║
-║    START = Slow Mode Toggle                                   ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
-## Phase 1 Quick Reference
-```
-╔═══════════════════════════════════════════════════════════════╗
-║                  PHASE 1 - FULL ROBOT CONTROLS                 ║
-╠═══════════════════════════════════════════════════════════════╣
-║  ALLIANCE:    DPAD ↑ = Blue (Tag 20)  |  DPAD ↓ = Red (Tag 24)║
-║  LAUNCHER:    DPAD → = +5% Power      |  DPAD ← = -5% Power   ║
-║                                                                ║
-║  B = Intake Toggle      |  X = Aim & Shoot                    ║
-║  Y = Reverse Intake     |  A = EMERGENCY STOP                 ║
-║  LB = Armor Toggle     |  (Deploy/Retract stabilizers)       ║
-║                                                                ║
-║  START = Slow Mode      |  BACK = Reset Position              ║
-║                                                                ║
-║  Left Stick Y = Forward/Back  |  Right Stick X = Strafe L/R   ║
-║  LT/RT = Rotate Left/Right                                    ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
-## Phase 2 Quick Reference
-```
-╔═══════════════════════════════════════════════════════════════╗
-║              PHASE 2 - LIMELIGHT FUSION CONTROLS               ║
-╠═══════════════════════════════════════════════════════════════╣
-║  ALLIANCE:    DPAD ↑ = Blue (Tag 20)  |  DPAD ↓ = Red (Tag 24)║
-║  LAUNCHER:    DPAD → = +5% Power      |  DPAD ← = -5% Power   ║
-║                                                                ║
-║  B = Intake Toggle      |  X = Aim & Shoot                    ║
-║  Y = Reverse Intake     |  A = EMERGENCY STOP                 ║
-║  LB = Armor Toggle    |  RB = Auto-Navigate                  ║
-║                                                                ║
-║  START = Slow Mode      |  BACK = Reset Position              ║
-║                                                                ║
-║  Left Stick Y = Forward/Back  |  Right Stick X = Strafe L/R   ║
-║  LT/RT = Rotate Left/Right                                    ║
-║                                                                ║
-║  POSITION FUSION: Odometry + Limelight + AprilTag             ║
-║  • Watch confidence % in telemetry                            ║
-║  • Vision auto-corrects drift                                 ║
-║  • Auto-nav drives to scoring position                        ║
-╚═══════════════════════════════════════════════════════════════╝
-```
-
-## Competition Day Workflow
-```
-┌─────────────────────────────────────────────┐
-│        COMPETITION DAY WORKFLOW             │
-├─────────────────────────────────────────────┤
-│                                             │
-│  1. Power on robot                          │
-│                                             │
-│  2. Run "Chassis Test ONLY"                 │
-│     → Verify all 4 drive motors working    │
-│     → Check odometry encoders counting      │
-│                                             │
-│  3. Switch to "Full Robot Teleop v2"        │
-│     (or "Phase 2 - Limelight Fusion")      │
-│                                             │
-│  4. Select alliance (DPAD UP/DOWN)          │
-│                                             │
-│  5. Test all mechanisms:                    │
-│     → Intake (B)                            │
-│     → Launcher (X)                          │
-│     → Armor (LB)                            │
-│     → Vision targeting                      │
-│                                             │
-│  6. Press BACK at starting position         │
-│                                             │
-│  7. Ready for match!                        │
-│                                             │
-└─────────────────────────────────────────────┘
+Where:
+  x  = forward/backward input
+  y  = strafe input
+  rx = rotation input
 ```
 
 ---
 
-##  Feature Comparison
+## Configuration Guide
 
-| Feature | Chassis Test | Phase 1 | Phase 2 |
-|---------|--------------|---------|---------|
-| **Drive Control** | ✓ | ✓ | ✓ |
-| **Individual Motor Test** | ✓ | ✗ | ✗ |
-| **Intake System** | ✗ | ✓ | ✓ |
-| **Launcher** | ✗ | ✓ | ✓ |
-| **Turret Auto-Aim** | ✗ | ✓ | ✓ |
-| **Armor Deployment** | ✗ | ✓ | ✓ |
-| **Position Tracking** | Basic | Drive Encoders | Triple Fusion |
-| **Vision Correction** | ✗ | ✗ | ✓ |
-| **Limelight Integration** | ✗ | ✗ | ✓ |
-| **Auto-Navigation** | ✗ | ✗ | ✓ |
-| **Position Confidence** | ✗ | ✗ | ✓ |
-| **Push Detection** | ✗ | ✗ | ✓ |
-| **Vision Cross-Check** | ✗ | ✗ | ✓ |
+### Step 1: Hardware Setup
+
+1. **Mount motors** in mecanum configuration (X-pattern wheels)
+2. **Connect encoders** to motor ports
+3. **Install IMU** on robot chassis (logo facing left, USB forward)
+4. **For ChassisTest**: Install dedicated odometry wheels at specified offsets
+
+### Step 2: Configure Robot Controller
+
+1. Open FTC Robot Controller app
+2. Navigate to "Configure Robot"
+3. Add devices matching the names in code:
+   - Motors: `frontLeftMotor`, `backLeftMotor`, `frontRightMotor`, `backRightMotor`
+   - IMU: `imu`
+   - ChassisTest only: `xOdo`, `yOdo`
+
+### Step 3: Verify Motor Directions
+
+1. Deploy **ChassisTest**
+2. Use **DPAD DOWN** to cycle to individual motor tests
+3. Push **left stick forward** for each motor
+4. Verify wheel spins in correct direction:
+   - Front left should spin to drive robot forward
+   - Back left should spin to drive robot forward
+   - Front right should spin to drive robot forward
+   - Back right should spin to drive robot forward
+5. If any wheel spins backward, update `setDirection()` in code
+
+### Step 4: Calibrate Odometry (ChassisTest only)
+
+1. Place robot on field with clear reference
+2. Press BACK to reset position
+3. Drive forward 24 inches using tape measure
+4. Check telemetry reported distance
+5. Adjust `WHEEL_DIAMETER_MM` if needed: `actual_diameter = reported_distance / 24 * current_diameter`
+
+### Step 5: Test IMU Heading
+
+1. Press LEFT BUMPER (JustMotion) or BACK (ChassisTest) to reset heading
+2. Rotate robot 90° clockwise
+3. Verify heading shows approximately -90°
+4. If incorrect, check IMU mounting orientation
 
 ---
 
-**Version**: Phase 2 Complete  
-**Status**: ✅ All Features Implemented  
-**Hardware**: 8/8 Motor Ports Used, 2/6 Servo Ports Used  
-**Last Updated**: December 2024
+## Troubleshooting
 
----
+### Robot Drives in Wrong Direction
 
-##  Need Help?
+**Symptom**: Commands result in unexpected movement direction
 
-- **Motor not working?** → Run Chassis Test to diagnose
-- **Vision not working?** → Check camera connections in telemetry
-- **Position drifting?** → Phase 2 auto-corrects with vision
-- **Robot behaving oddly?** → Press A for emergency stop, then BACK to reset
+**Solutions**:
+1. Check motor directions in configuration
+2. Use ChassisTest individual motor tests
+3. Verify mecanum wheel orientation (X-pattern)
+4. Adjust `setDirection()` for specific motors
 
-Good luck at competition! 🏆🤖
+### Odometry Drift
+
+**Symptom**: Position tracking becomes inaccurate over time
+
+**ChassisTest Solutions**:
+1. Check odometry wheel contact with ground
+2. Verify encoder connections
+3. Recalibrate wheel diameter
+4. Ensure wheels spin freely without binding
+
+**JustMotion Solutions**:
+1. Check for wheel slip during aggressive driving
+2. Verify all four motor encoders are working
+3. Adjust `COUNTS_PER_MOTOR_REV` if using different motors
+4. Consider switching to ChassisTest with dedicated wheels
+
+### IMU Heading Incorrect
+
+**Symptom**: Heading doesn't match robot orientation
+
+**Solutions**:
+1. Verify IMU mounting: Logo facing LEFT, USB facing FORWARD
+2. Update `IMU.Parameters` if mounting differs
+3. Reset heading with LEFT BUMPER (JustMotion) or BACK (ChassisTest)
+4. Check for magnetic interference near IMU
+
+### Slow Response or Lag
+
+**Symptom**: Robot responds slowly to controls
+
+**Solutions**:
+1. Check battery voltage (should be >12V)
+2. Verify no loose connections
+3. Reduce telemetry update frequency if needed
+4. Check for motor stalling or binding
+
+### Robot Won't Move
+
+**Symptom**: Motors don't respond to controls
+
+**Solutions**:
+1. Check gamepad connection
+2. Verify motor power limits aren't too low
+3. Press A button (ChassisTest) to release emergency stop
+4. Check joystick past deadzone threshold
+5. Verify motors configured in Robot Controller app
+
+### Field-Centric Mode Not Working
+
+**Symptom**: Field-centric feels like robot-centric
+
+**Solutions**:
+1. Reset heading with LEFT BUMPER before enabling field-centric
+2. Ensure IMU is working (check heading display)
+3. Verify heading updates in telemetry while rotating
+4. Robot must be facing "forward" when heading reset
