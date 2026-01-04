@@ -14,13 +14,13 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import java.util.List;
 
-@Autonomous(name="AutoFRBlue", group="Autonomous")
+@Autonomous(name="AutoBlue", group="Autonomous")
 public class AutoBlue extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = 1.0;
     private static final double LAUNCH_MOTOR_POWER = 0.7;  // Reduced for better accuracy
-    private static final double RAMP_MOTOR_POWER = 1.0;
+    private static final double SPATULA_SERVO_POWER = 0.8;
 
     // Navigation constants
     private static final double AUTO_MAX_SPEED = 0.7;
@@ -39,26 +39,29 @@ public class AutoBlue extends LinearOpMode {
 
     // Field positions (in feet, measured from field center)
     // Blue alliance spike marks (right side of field, mirrored from red)
-    private static final double BLUE_MIDDLE_SPIKE_X = 3.0;  // Middle spike mark (mirrored)
+    private static final double BLUE_LOWER_SPIKE_X = -3.0;
+    private static final double BLUE_LOWER_SPIKE_Y = -3.0;
+
+    private static final double BLUE_MIDDLE_SPIKE_X = -3.0;  // Middle spike mark (mirrored)
     private static final double BLUE_MIDDLE_SPIKE_Y = -1.0;  // Below center line
 
-    private static final double BLUE_TOP_SPIKE_X = 3.0;     // Top spike mark (same X)
+    private static final double BLUE_TOP_SPIKE_X = -3.0;     // Top spike mark (same X)
     private static final double BLUE_TOP_SPIKE_Y = 1.0;      // Above center line
 
     // Shooting position (at field center for AprilTag alignment)
     private static final double BLUE_SHOOT_X = 0.0;
-    private static final double BLUE_SHOOT_Y = 0.0;
+    private static final double BLUE_SHOOT_Y = 4.0;
 
     // Park position (blue observation zone - mirrored)
-    private static final double BLUE_PARK_X = 3.0;
-    private static final double BLUE_PARK_Y = -4.0;
+//    private static final double BLUE_PARK_X = 3.0;
+//    private static final double BLUE_PARK_Y = -4.0;
 
     // Obelisk position (center structure with AprilTags)
     private static final double OBELISK_X = 0.0;
     private static final double OBELISK_Y = 6.0;
 
     // Default starting position if AprilTag detection fails
-    private static final double BLUE_DEFAULT_START_X = 4.0;
+    private static final double BLUE_DEFAULT_START_X = -1.0;
     private static final double BLUE_DEFAULT_START_Y = -5.0;
 
     // Tracking (will be set based on actual start position)
@@ -121,11 +124,12 @@ public class AutoBlue extends LinearOpMode {
 
             telemetry.addLine();
             telemetry.addLine("Target Sequence:");
-            telemetry.addData("  1. Middle Spike", "X: %.1f, Y: %.1f", BLUE_MIDDLE_SPIKE_X, BLUE_MIDDLE_SPIKE_Y);
-            telemetry.addData("  2. Shoot Position", "X: %.1f, Y: %.1f", BLUE_SHOOT_X, BLUE_SHOOT_Y);
-            telemetry.addData("  3. Top Spike", "X: %.1f, Y: %.1f", BLUE_TOP_SPIKE_X, BLUE_TOP_SPIKE_Y);
-            telemetry.addData("  4. Shoot Position", "X: %.1f, Y: %.1f", BLUE_SHOOT_X, BLUE_SHOOT_Y);
-            telemetry.addData("  5. Park", "X: %.1f, Y: %.1f", BLUE_PARK_X, BLUE_PARK_Y);
+            telemetry.addData("  1. Shoot Position", "X: %.1f, Y: %.1f", BLUE_SHOOT_X, BLUE_SHOOT_Y)
+            telemetry.addData("  2. Top Spike", "X: %.1f, Y: %.1f", BLUE_TOP_SPIKE_X, BLUE_TOP_SPIKE_Y);
+            telemetry.addData("  3. Shoot Position", "X: %.1f, Y: %.1f", BLUE_SHOOT_X, BLUE_SHOOT_Y);
+            telemetry.addData("  4. Middle Spike", "X: %.1f, Y: %.1f", BLUE_MIDDLE_SPIKE_X, BLUE_MIDDLE_SPIKE_Y);
+            telemetry.addData("  5. Shoot Position", "X: %.1f, Y: %.1f", BLUE_SHOOT_X, BLUE_SHOOT_Y);
+            telemetry.addData("  6. Lower Spike", "X: %.1f, Y: %.1f", BLUE_LOW_SPIKE_X, BLUE_LOW_SPIKE_Y);
             telemetry.addLine("========================================");
             telemetry.update();
 
@@ -147,65 +151,70 @@ public class AutoBlue extends LinearOpMode {
         waitForStart();
         if (isStopRequested()) return;
 
-        // Start ramp motor
-        rampMotor.setPower(RAMP_MOTOR_POWER);
+        // Start intake/ramp motor
+        intakeMotor.setPower(INTAKE_MOTOR_POWER);
 
         // ========== SEQUENCE START ==========
 
-        // 1. Drive to middle spike mark
-        telemetry.addData("Step 1", "Driving to Middle Spike");
-        telemetry.update();
-        driveToPosition(BLUE_MIDDLE_SPIKE_X, BLUE_MIDDLE_SPIKE_Y, 0);
-
-        // 2. Intake balls from middle spike
-        telemetry.addData("Step 2", "Intaking Middle Spike");
-        telemetry.update();
-        intakeBalls(3.5, BLUE_MIDDLE_SPIKE_X, BLUE_MIDDLE_SPIKE_Y);  // 3.5 seconds to intake
-
-        // 3. Drive to shooting position
-        telemetry.addData("Step 3", "Moving to Shoot Position");
+        // 1. Drive to shooting position
+        telemetry.addData("Step 1", "Moving to Shoot Position");
         telemetry.update();
         driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
 
-        // 4. Align with AprilTag
-        telemetry.addData("Step 4", "Aligning with Goal");
-        telemetry.update();
-        alignWithAprilTag(TARGET_APRILTAG_ID, 3.0);  // 3 second timeout
-
-        // 5. Shoot balls
-        telemetry.addData("Step 5", "Shooting Middle Spike Balls");
-        telemetry.update();
-        shootBalls(2.5);  // 2.5 seconds to shoot
-
-        // 6. Drive to top spike mark
-        telemetry.addData("Step 6", "Driving to Top Spike");
+        // 2. Drive to top spike mark
+        telemetry.addData("Step 2", "Driving to Top Spike");
         telemetry.update();
         driveToPosition(BLUE_TOP_SPIKE_X, BLUE_TOP_SPIKE_Y, 0);
 
-        // 7. Intake balls from top spike
-        telemetry.addData("Step 7", "Intaking Top Spike");
+        // 3. Intake balls from top spike
+        telemetry.addData("Step 3", "Intaking Top Spike");
         telemetry.update();
-        intakeBalls(3.5, BLUE_TOP_SPIKE_X, BLUE_TOP_SPIKE_Y);
+        intakeBalls(3.5, BLUE_TOP_SPIKE_X, BLUE_TOP_SPIKE_Y);  // 3.5 seconds to intake
 
-        // 8. Drive back to shooting position
-        telemetry.addData("Step 8", "Moving to Shoot Position");
+        // 4. Drive to shooting position
+        telemetry.addData("Step 4", "Moving to Shoot Position");
         telemetry.update();
         driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
 
-        // 9. Align with AprilTag again
-        telemetry.addData("Step 9", "Aligning with Goal");
+        // 5. Align with AprilTag
+        telemetry.addData("Step 5", "Aligning with Goal");
+        telemetry.update();
+        alignWithAprilTag(TARGET_APRILTAG_ID, 3.0);  // 3 second timeout
+
+        // 6. Shoot balls
+        telemetry.addData("Step 6", "Shooting Top Spike Balls");
+        telemetry.update();
+        shootBalls(2.5);  // 2.5 seconds to shoot
+
+        // 7. Drive to top spike mark
+        telemetry.addData("Step 7", "Driving to Middle Spike");
+        telemetry.update();
+        driveToPosition(BLUE_MIDDLE_SPIKE_X, BLUE_MIDDLE_SPIKE_Y, 0);
+
+        // 8. Intake balls from top spike
+        telemetry.addData("Step 8", "Intaking Middle Spike");
+        telemetry.update();
+        intakeBalls(3.5, BLUE_MIDDLE_SPIKE_X, BLUE_MIDDLE_SPIKE_Y);
+
+        // 9. Drive back to shooting position
+        telemetry.addData("Step 9", "Moving to Shoot Position");
+        telemetry.update();
+        driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
+
+        // 10. Align with AprilTag again
+        telemetry.addData("Step 10", "Aligning with Goal");
         telemetry.update();
         alignWithAprilTag(TARGET_APRILTAG_ID, 3.0);
 
-        // 10. Shoot balls
-        telemetry.addData("Step 10", "Shooting Top Spike Balls");
+        // 11. Shoot balls
+        telemetry.addData("Step 11", "Shooting Middle Spike Balls");
         telemetry.update();
         shootBalls(2.5);
 
-        // 11. Park near observation zone
-        telemetry.addData("Step 11", "Parking");
+        // 12. Park near observation zone
+        telemetry.addData("Step 12", "Ending");
         telemetry.update();
-        driveToPosition(BLUE_PARK_X, BLUE_PARK_Y, 0);
+        driveToPosition(BLUE_LOWER_SPIKE_X, BLUE_LOWER_SPIKE_Y, 0);
 
         // Stop all motors
         stopAllMotors();
@@ -230,11 +239,9 @@ public class AutoBlue extends LinearOpMode {
         // Mechanism motors
         intakeMotor = hardwareMap.dcMotor.get("intakeMotor");
         launchMotor = hardwareMap.dcMotor.get("launchMotor");
-        rampMotor = hardwareMap.dcMotor.get("rampMotor");
 
         // Set motor modes
         intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        rampMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // Set brake mode
         frontLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -243,7 +250,6 @@ public class AutoBlue extends LinearOpMode {
         backRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rampMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Reverse right side motors
         frontRightMotor.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -419,120 +425,120 @@ public class AutoBlue extends LinearOpMode {
 
     }
 
-        private void driveFieldCentric ( double x, double y, double rx, double botHeading){
-            // Field-centric transformation
-            double rotX = x * Math.cos(-botHeading) - y * Math.sin(-botHeading);
-            double rotY = x * Math.sin(-botHeading) + y * Math.cos(-botHeading);
+    private void driveFieldCentric ( double x, double y, double rx, double botHeading){
+        // Field-centric transformation
+        double rotX = x * Math.cos(-botHeading) - y * Math.sin(-botHeading);
+        double rotY = x * Math.sin(-botHeading) + y * Math.cos(-botHeading);
 
-            rotX = rotX * 1.1;  // Strafe correction
+        rotX = rotX * 1.1;  // Strafe correction
 
-            // Calculate motor powers
-            //double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
-            //double frontLeftPower = (rotY + rotX + rx) / denominator;
-            //double backLeftPower = (rotY - rotX + rx) / denominator;
-            //double frontRightPower = (rotY - rotX - rx) / denominator;
-            //double backRightPower = (rotY + rotX - rx) / denominator;
+        // Calculate motor powers
+        //double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+        //double frontLeftPower = (rotY + rotX + rx) / denominator;
+        //double backLeftPower = (rotY - rotX + rx) / denominator;
+        //double frontRightPower = (rotY - rotX - rx) / denominator;
+        //double backRightPower = (rotY + rotX - rx) / denominator;
 
 
-            double frontLeftPower = -rotY + rotX + rx;
-            double backLeftPower = -rotY - rotX + rx;  // Inverted y for proper strafe
-            double frontRightPower = -rotY - rotX - rx;
-            double backRightPower = -rotY + rotX - rx;  // Inverted y for proper strafe
+        double frontLeftPower = -rotY + rotX + rx;
+        double backLeftPower = -rotY - rotX + rx;  // Inverted y for proper strafe
+        double frontRightPower = -rotY - rotX - rx;
+        double backRightPower = -rotY + rotX - rx;  // Inverted y for proper strafe
 
-            // Find the maximum absolute power to maintain proportional relationships
-            double maxPower = Math.max(Math.abs(frontLeftPower), Math.abs(backLeftPower));
-            maxPower = Math.max(maxPower, Math.abs(frontRightPower));
-            maxPower = Math.max(maxPower, Math.abs(backRightPower));
+        // Find the maximum absolute power to maintain proportional relationships
+        double maxPower = Math.max(Math.abs(frontLeftPower), Math.abs(backLeftPower));
+        maxPower = Math.max(maxPower, Math.abs(frontRightPower));
+        maxPower = Math.max(maxPower, Math.abs(backRightPower));
 
-            // Scale down proportionally if any power exceeds maxDrivePower
-            // This preserves the motor power ratios while respecting the power limit
-            if (maxPower > 1.0) {
-                double scale = 1.0 / maxPower;
-                frontLeftPower *= scale;
-                backLeftPower *= scale;
-                frontRightPower *= scale;
-                backRightPower *= scale;
+        // Scale down proportionally if any power exceeds maxDrivePower
+        // This preserves the motor power ratios while respecting the power limit
+        if (maxPower > 1.0) {
+            double scale = 1.0 / maxPower;
+            frontLeftPower *= scale;
+            backLeftPower *= scale;
+            frontRightPower *= scale;
+            backRightPower *= scale;
+        }
+
+        // Clamp all motor powers to ±0.5 to ensure they never exceed the limit
+        frontLeftPower = Range.clip(frontLeftPower, -0.5, 0.5);
+        backLeftPower = Range.clip(backLeftPower, -0.5, 0.5);
+        frontRightPower = Range.clip(frontRightPower, -0.5, 0.5);
+        backRightPower = Range.clip(backRightPower, -0.5, 0.5);
+
+
+        frontLeftMotor.setPower(frontLeftPower);
+        backLeftMotor.setPower(backLeftPower);
+        frontRightMotor.setPower(frontRightPower);
+        backRightMotor.setPower(backRightPower);
+    }
+
+    private void stopDriveMotors () {
+        frontLeftMotor.setPower(0);
+        backLeftMotor.setPower(0);
+        frontRightMotor.setPower(0);
+        backRightMotor.setPower(0);
+    }
+
+    private void stopAllMotors () {
+        stopDriveMotors();
+        intakeMotor.setPower(0);
+        launchMotor.setPower(0);
+        rampMotor.setPower(0);
+    }
+
+    private AprilTagDetection getAprilTagDetection ( int targetId){
+        List<AprilTagDetection> detections = aprilTag.getDetections();
+        for (AprilTagDetection detection : detections) {
+            if (detection.id == targetId) {
+                return detection;
             }
-
-            // Clamp all motor powers to ±0.5 to ensure they never exceed the limit
-            frontLeftPower = Range.clip(frontLeftPower, -0.5, 0.5);
-            backLeftPower = Range.clip(backLeftPower, -0.5, 0.5);
-            frontRightPower = Range.clip(frontRightPower, -0.5, 0.5);
-            backRightPower = Range.clip(backRightPower, -0.5, 0.5);
-
-
-            frontLeftMotor.setPower(frontLeftPower);
-            backLeftMotor.setPower(backLeftPower);
-            frontRightMotor.setPower(frontRightPower);
-            backRightMotor.setPower(backRightPower);
         }
+        return null;
+    }
 
-        private void stopDriveMotors () {
-            frontLeftMotor.setPower(0);
-            backLeftMotor.setPower(0);
-            frontRightMotor.setPower(0);
-            backRightMotor.setPower(0);
-        }
-
-        private void stopAllMotors () {
-            stopDriveMotors();
-            intakeMotor.setPower(0);
-            launchMotor.setPower(0);
-            rampMotor.setPower(0);
-        }
-
-        private AprilTagDetection getAprilTagDetection ( int targetId){
-            List<AprilTagDetection> detections = aprilTag.getDetections();
-            for (AprilTagDetection detection : detections) {
-                if (detection.id == targetId) {
+    public AprilTagDetection getAnyObeliskTag() {
+        List<AprilTagDetection> detections = aprilTag.getDetections();
+        for (AprilTagDetection detection : detections) {
+            for (int obeliskId : OBELISK_APRILTAG_IDS) {
+                if (detection.id == obeliskId) {
                     return detection;
                 }
             }
-            return null;
         }
-
-        public AprilTagDetection getAnyObeliskTag() {
-            List<AprilTagDetection> detections = aprilTag.getDetections();
-            for (AprilTagDetection detection : detections) {
-                for (int obeliskId : OBELISK_APRILTAG_IDS) {
-                    if (detection.id == obeliskId) {
-                        return detection;
-                    }
-                }
-            }
-            return null;
-        }
-
-        private void calculatePositionFromObelisk (AprilTagDetection obeliskTag){
-            // Obelisk is at (0, 6) on the field
-            // AprilTag detection gives us range, bearing, and yaw
-
-            // Range is distance from camera to tag (in inches, convert to feet)
-            double rangeToTag = obeliskTag.ftcPose.range / 12.0;
-
-            // Bearing is the horizontal angle to the tag (degrees, convert to radians)
-            double bearingToTag = Math.toRadians(obeliskTag.ftcPose.bearing);
-
-            // Yaw is how rotated the robot is relative to tag
-            double yawToTag = Math.toRadians(obeliskTag.ftcPose.yaw);
-
-            // Get current robot heading from IMU
-            double currentHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
-
-            // Calculate absolute angle from robot to obelisk
-            double absoluteAngleToTag = currentHeading + bearingToTag;
-
-            // Obelisk position
-            double obeliskX = OBELISK_X;
-            double obeliskY = OBELISK_Y;
-
-            // Calculate robot position relative to obelisk
-            // The robot is 'rangeToTag' away at angle 'absoluteAngleToTag' from obelisk
-            robotX = obeliskX - rangeToTag * Math.sin(absoluteAngleToTag);
-            robotY = obeliskY - rangeToTag * Math.cos(absoluteAngleToTag);
-            robotHeading = currentHeading;
-
-            // Note: This assumes camera is at robot center. If camera is offset from
-            // robot center, you'll need to add offset compensation here.
-        }
+        return null;
     }
+
+    private void calculatePositionFromObelisk (AprilTagDetection obeliskTag){
+        // Obelisk is at (0, 6) on the field
+        // AprilTag detection gives us range, bearing, and yaw
+
+        // Range is distance from camera to tag (in inches, convert to feet)
+        double rangeToTag = obeliskTag.ftcPose.range / 12.0;
+
+        // Bearing is the horizontal angle to the tag (degrees, convert to radians)
+        double bearingToTag = Math.toRadians(obeliskTag.ftcPose.bearing);
+
+        // Yaw is how rotated the robot is relative to tag
+        double yawToTag = Math.toRadians(obeliskTag.ftcPose.yaw);
+
+        // Get current robot heading from IMU
+        double currentHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
+        // Calculate absolute angle from robot to obelisk
+        double absoluteAngleToTag = currentHeading + bearingToTag;
+
+        // Obelisk position
+        double obeliskX = OBELISK_X;
+        double obeliskY = OBELISK_Y;
+
+        // Calculate robot position relative to obelisk
+        // The robot is 'rangeToTag' away at angle 'absoluteAngleToTag' from obelisk
+        robotX = obeliskX - rangeToTag * Math.sin(absoluteAngleToTag);
+        robotY = obeliskY - rangeToTag * Math.cos(absoluteAngleToTag);
+        robotHeading = currentHeading;
+
+        // Note: This assumes camera is at robot center. If camera is offset from
+        // robot center, you'll need to add offset compensation here.
+    }
+}
