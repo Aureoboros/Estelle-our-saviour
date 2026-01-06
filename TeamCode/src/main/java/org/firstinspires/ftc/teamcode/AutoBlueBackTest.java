@@ -94,12 +94,10 @@ private void intakeGateBalls(double duration) {
         intakeMotor.setPower(0);
     }
 
-private void intakeSpikeBalls(double duration, double spike_x, double spike_y) {
-        driveToPosition(-5.75, 0);
-        drive.turn(Math.toRadians(30));
+private void intakeSpikeBalls(double duration, double spike_x, double spike_y, double angle) {
+        driveToPosition(spike_x + 2.0, spike_y);
+        drive.turn(Math.toRadians(angle));
         sleep((long)(duration * 500));
-        intakeMotor.setPower(INTAKE_POWER);
-        sleep((long)(duration * 4000));
         intakeMotor.setPower(0);
     }
 
