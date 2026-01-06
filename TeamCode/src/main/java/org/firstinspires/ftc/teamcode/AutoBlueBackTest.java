@@ -16,8 +16,8 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import java.util.List;
 
-@Autonomous(name="AutoBlue", group="Autonomous")
-public class AutoBlue extends LinearOpMode {
+@Autonomous(name="AutoBlueBackTest", group="Autonomous")
+public class AutoBlueBackTest extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = 1.0;
@@ -77,7 +77,7 @@ public class AutoBlue extends LinearOpMode {
     private IMU imu;
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
-} // AutoBlue function close bracket
+
 
 //Actual code starts here DEBUG LIKE HELL BEYOND THIS LINE
 
@@ -123,3 +123,4 @@ private void intakeBalls(double duration, double spike_x, double spike_y) {
         rampMotor.setPower(-0.4);  // Reverse power during launch (40% speed)
 
     }
+} // AutoBlue function close bracket} // AutoBlue function close bracket
