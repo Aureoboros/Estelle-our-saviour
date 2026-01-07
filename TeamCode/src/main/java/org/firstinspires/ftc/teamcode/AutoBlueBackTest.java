@@ -97,7 +97,8 @@ private void intakeGateBalls(double duration) {
 private void intakeSpikeBalls(double duration, double spike_x, double spike_y, double angle) {
         driveToPosition(spike_x + 2.0, spike_y);
         drive.turn(Math.toRadians(angle));
-        sleep((long)(duration * 500));
+        intakeMotor.setPower(INTAKE_POWER);
+        driveToPosition(spike_x - 2.0, spike_y);
         intakeMotor.setPower(0);
     }
 
@@ -107,9 +108,8 @@ private void intakeSpikeBalls(double duration, double spike_x, double spike_y, d
         //sleep(1500);  // Spin-up time;
 
         // Stop intake and ramp
-        intakeMotor.setPower(0);
-        rampMotor.setPower(0);
-
+        driveToPosition();
+        //drive to final shoort coordinate
         frontLeftMotor.setPower(0);
         backLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
