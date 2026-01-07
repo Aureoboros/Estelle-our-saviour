@@ -109,20 +109,17 @@ private void intakeSpikeBalls(double duration, double spike_x, double spike_y, d
 
         // Stop intake and ramp
         driveToPosition();
-        //drive to final shoort coordinate
+        //drive to final shoot coordinate
         frontLeftMotor.setPower(0);
         backLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
         backRightMotor.setPower(0);
 
-        launchMotor.setPower(0);
-        sleep(1000);
         launchMotor.setPower(0.8);
         sleep(1500);
+        launchMotor.setPower(0);
+
 
         // Start feeding
-        intakeMotor.setPower(1.0);
-        rampMotor.setPower(-0.4);  // Reverse power during launch (40% speed)
-
     }
 } // AutoBlue function close bracket} // AutoBlue function close bracket
