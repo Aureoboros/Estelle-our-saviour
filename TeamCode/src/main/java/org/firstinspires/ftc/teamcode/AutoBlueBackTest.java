@@ -79,16 +79,16 @@ public class AutoBlueBackTest extends LinearOpMode {
     private VisionPortal visionPortal;
 
 
-//Actual code starts here: DEBUG LIKE HELL BEYOND THIS LINE
+// Actual code starts here: DEBUG LIKE HELL BEYOND THIS LINE
 
 
 // Use preloaded balls then go to middle spike then shoot again then "open gate/load then shoot"
 // Then do the same thing a few times then go to tops spike and shoot then go to bottom spike and shoot
 
 private void intakeGateBalls(double duration) {
-        driveToPosition(-5.75, 0);
-        drive.turn(Math.toRadians(30));
-        sleep((long)(duration * 500));
+        driveToPosition(-2.0, -1.0);
+        driveToPosition(-5.0, 1.0); // OG values: (-5.5, -0.75)
+        drive.turn(Math.toRadians(60));
         intakeMotor.setPower(INTAKE_POWER);
         sleep((long)(duration * 4000));
         intakeMotor.setPower(0);
@@ -96,30 +96,18 @@ private void intakeGateBalls(double duration) {
 
 private void intakeSpikeBalls(double duration, double spike_x, double spike_y, double angle) {
         driveToPosition(spike_x, spike_y);
-        drive.turn(Math.toRadians(angle));
+        drive.turn(Math.toRadians(angle)); // CHECK PLEASE
         intakeMotor.setPower(INTAKE_POWER);
         driveToPosition(spike_x - 2.0, spike_y);
         intakeMotor.setPower(0);
+        driveToPosition(spike_x + 2.0, spike_y);
     }
 
     private void shootBalls(double duration) {
-        // Spin up launch motors
-        //launchMotor.setPower(LAUNCH_MOTOR_POWER);
-        //sleep(1500);  // Spin-up time;
-
-        // Stop intake and ramp
-        driveToPosition();
-        //drive to final shoot coordinate
-        frontLeftMotor.setPower(0);
-        backLeftMotor.setPower(0);
-        frontRightMotor.setPower(0);
-        backRightMotor.setPower(0);
-
-        launchMotor.setPower(0.8);
-        sleep(1500);
-        launchMotor.setPower(0);
-
-
-        // Start feeding
+       driveToPosition(-2.0, -1.0);
+       driveToPosition(0.0, 4.0);
+       launchMotor.setPower(LAUNCH_MOTOR_POWER);
+       //FIND SOME WAY TO SET THE SERVO TO TURN ONCE
+       sleep(800);
+       //REPEAT THREE TIMES TO GET ALL THREE BALLS SHOT
     }
-} // AutoBlue function close bracket} // AutoBlue function close bracket
