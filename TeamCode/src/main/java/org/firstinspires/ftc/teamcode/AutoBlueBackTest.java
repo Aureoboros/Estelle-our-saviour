@@ -78,36 +78,49 @@ public class AutoBlueBackTest extends LinearOpMode {
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
 
-
 // Actual code starts here: DEBUG LIKE HELL BEYOND THIS LINE
 
-
-// Use preloaded balls then go to middle spike then shoot again then "open gate/load then shoot"
-// Then do the same thing a few times then go to tops spike and shoot then go to bottom spike and shoot
-
-private void intakeGateBalls(double duration) {
+public class actualCodeLol {
+    private void intakeGateBalls(double duration) {
         driveToPosition(-2.0, -1.0);
         driveToPosition(-5.0, 1.0); // OG values: (-5.5, -0.75)
         drive.turn(Math.toRadians(60));
         intakeMotor.setPower(INTAKE_POWER);
         sleep((long)(duration * 4000));
         intakeMotor.setPower(0);
-    }
+      }
 
-private void intakeSpikeBalls(double duration, double spike_x, double spike_y, double angle) {
+    private void intakeSpikeBalls(double duration, double spike_x, double spike_y, double angle) {
+        // SOMEBODY NEEDS TO CHECK IF SPIKE_X AND Y ARE IN INCHES OR SOMETHING ELSE
         driveToPosition(spike_x, spike_y);
         drive.turn(Math.toRadians(angle)); // CHECK PLEASE
         intakeMotor.setPower(INTAKE_POWER);
         driveToPosition(spike_x - 2.0, spike_y);
         intakeMotor.setPower(0);
         driveToPosition(spike_x + 2.0, spike_y);
-    }
+      }
 
-    private void shootBalls(double duration) {
-       driveToPosition(-2.0, -1.0);
-       driveToPosition(0.0, 4.0);
-       launchMotor.setPower(LAUNCH_MOTOR_POWER);
-       //FIND SOME WAY TO SET THE SERVO TO TURN ONCE
-       sleep(800);
-       //REPEAT THREE TIMES TO GET ALL THREE BALLS SHOT
-    }
+    private void intakeSpikeBalls(double duration, double spike_x, double spike_y, double angle) {
+        // SOMEBODY NEEDS TO CHECK IF SPIKE_X AND Y ARE IN INCHES OR SOMETHING ELSE
+        driveToPosition(-2.5, -1.0)
+        driveToPosition(spike_x, spike_y);
+        drive.turn(Math.toRadians(angle)); // CHECK PLEASE
+        intakeMotor.setPower(INTAKE_POWER);
+        driveToPosition(spike_x - 2.0, spike_y);
+        intakeMotor.setPower(0);
+        driveToPosition(spike_x + 2.0, spike_y);
+      }
+    
+// Use preloaded balls then go to middle spike then shoot again then "open gate/load then shoot"
+// Then do the same thing a few times then go to tops spike and shoot then go to bottom spike and shoot
+
+    // Stopping the defining of functions and starting to cell them
+    // Do I needed to add something here before I call stuff???
+    
+       shootBalls();
+       intakeSpikeBalls(-2.5, -1.0); // THIS IS ASSUMING IT WORKS IN TICKS AND I DON'T EVEN HAVE DURATION OR ANGLE IN HERE
+       shootBalls();
+       // FINISH
+    
+    
+}
