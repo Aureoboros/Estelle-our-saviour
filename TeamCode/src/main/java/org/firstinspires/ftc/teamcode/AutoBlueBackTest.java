@@ -40,7 +40,7 @@ public class AutoBlueBackTest extends LinearOpMode {
     private static final int[] OBELISK_APRILTAG_IDS = {21, 22, 23};  // Obelisk tags for positioning
 
     // Field positions (in feet, measured from field center)
-    // Blue alliance spike marks (right side of field, mirrored from red)
+    // Blue alliance spike marks (left side of field, mirrored from red)
     private static final double BLUE_LOWER_SPIKE_X = -3.0;
     private static final double BLUE_LOWER_SPIKE_Y = -3.0;
 
@@ -50,7 +50,7 @@ public class AutoBlueBackTest extends LinearOpMode {
     private static final double BLUE_TOP_SPIKE_X = -3.0;     // Top spike mark (same X)
     private static final double BLUE_TOP_SPIKE_Y = 1.0;      // Above center line
 
-    // Shooting position (at field center for AprilTag alignment)
+    // Shooting position (above field center for collision avoidance)
     private static final double BLUE_SHOOT_X = 0.0;
     private static final double BLUE_SHOOT_Y = 4.0;
 
@@ -81,35 +81,35 @@ public class AutoBlueBackTest extends LinearOpMode {
 // Actual code starts here: DEBUG LIKE HELL BEYOND THIS LINE
 
 public class actualCodeLol {
-    private void intakeGateBalls(double duration) {
+    private void intakeGateBalls() {
+        drive.turn(Math.toRadians(60));
         driveToPosition(-2.0, -1.0);
         driveToPosition(-5.0, 1.0); // OG values: (-5.5, -0.75)
-        drive.turn(Math.toRadians(60));
         intakeMotor.setPower(INTAKE_POWER);
         sleep((long)(duration * 4000));
         intakeMotor.setPower(0);
       }
 
-    private void intakeSpikeBalls(double duration, double spike_x, double spike_y, double angle) {
+    private void intakeSpikeBalls(double spike_x, double spike_y, double angle) {
         // SOMEBODY NEEDS TO CHECK IF SPIKE_X AND Y ARE IN INCHES OR SOMETHING ELSE
         driveToPosition(spike_x, spike_y);
         drive.turn(Math.toRadians(angle)); // CHECK PLEASE
         intakeMotor.setPower(INTAKE_POWER);
         driveToPosition(spike_x - 2.0, spike_y);
         intakeMotor.setPower(0);
-        driveToPosition(spike_x + 2.0, spike_y);
+        driveToPosition(spike_x, spike_y);
       }
 
-    private void intakeSpikeBalls(double duration, double spike_x, double spike_y, double angle) {
+//    private void intakeSpikeBalls(double duration, double spike_x, double spike_y, double angle) {
         // SOMEBODY NEEDS TO CHECK IF SPIKE_X AND Y ARE IN INCHES OR SOMETHING ELSE
-        driveToPosition(-2.5, -1.0)
-        driveToPosition(spike_x, spike_y);
-        drive.turn(Math.toRadians(angle)); // CHECK PLEASE
-        intakeMotor.setPower(INTAKE_POWER);
-        driveToPosition(spike_x - 2.0, spike_y);
-        intakeMotor.setPower(0);
-        driveToPosition(spike_x + 2.0, spike_y);
-      }
+//        driveToPosition(-2.5, -1.0)
+//        driveToPosition(spike_x, spike_y);
+//        drive.turn(Math.toRadians(angle)); // CHECK PLEASE
+//        intakeMotor.setPower(INTAKE_POWER);
+//        driveToPosition(spike_x - 2.0, spike_y);
+//        intakeMotor.setPower(0);
+//        driveToPosition(spike_x + 2.0, spike_y);
+//      }
     
 // Use preloaded balls then go to middle spike then shoot again then "open gate/load then shoot"
 // Then do the same thing a few times then go to tops spike and shoot then go to bottom spike and shoot
