@@ -14,8 +14,8 @@ import com.qualcomm.hardware.limelightvision.LLResultTypes;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-@Autonomous(name="AutoBlueBackTest with Limelight", group="Autonomous")
-public class AutoBlueBackTest extends LinearOpMode {
+@Autonomous(name="AutoBlueBackTest with MathLib", group="Autonomous")
+public class AutoBlueBackML extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = 1.0;
