@@ -539,10 +539,11 @@ public class AutoBlueBackML extends LinearOpMode {
         double angle = Math.toRadians(60);
         turnToAngle(angle);
         driveToPosition(-2.0, -1.0, angle);
-        driveToPosition(-5.0, 1.0, angle);
+        driveToPosition(-5.0, -1.0, angle);
         intakeMotor.setPower(INTAKE_POWER);
         sleep(4000); // 4 second intake
         intakeMotor.setPower(0);
+        driveToPosition(-2.0, -1.0, angle);
     }
 
     private void intakeSpikeBalls(double spike_x, double spike_y, double angle) {
