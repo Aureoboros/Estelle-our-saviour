@@ -51,22 +51,22 @@ public class AutoRedBackML extends LinearOpMode {
 
     // Field positions (in feet, measured from field center) - MIRRORED FOR RED
     private static final double RED_LOWER_SPIKE_X = 3.0;   // Mirrored X
-    private static final double RED_LOWER_SPIKE_Y = 3.0;   // Mirrored Y
+    private static final double RED_LOWER_SPIKE_Y = -3.0;   // Mirrored Y
     
     private static final double RED_MIDDLE_SPIKE_X = 3.0;  // Mirrored X
-    private static final double RED_MIDDLE_SPIKE_Y = 1.0;  // Mirrored Y
+    private static final double RED_MIDDLE_SPIKE_Y = -1.0;  // Mirrored Y
     
     private static final double RED_TOP_SPIKE_X = 3.0;     // Mirrored X
-    private static final double RED_TOP_SPIKE_Y = -1.0;    // Mirrored Y
+    private static final double RED_TOP_SPIKE_Y = 1.0;    // Mirrored Y
     
     private static final double RED_SHOOT_X = 0.0;         // Same X
-    private static final double RED_SHOOT_Y = -4.0;        // Mirrored Y
+    private static final double RED_SHOOT_Y = 4.0;        // Mirrored Y
     
     private static final double OBELISK_X = 0.0;
     private static final double OBELISK_Y = 6.0;
     
     private static final double RED_DEFAULT_START_X = 1.0;  // Mirrored X
-    private static final double RED_DEFAULT_START_Y = 5.0;  // Mirrored Y
+    private static final double RED_DEFAULT_START_Y = -5.0;  // Mirrored Y
     
     private static final double FIELD_MIN_FEET = -6.0;
     private static final double FIELD_MAX_FEET = 6.0;
