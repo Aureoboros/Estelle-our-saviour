@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.util.Range;
@@ -19,7 +20,8 @@ public class AutoBlue extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = 1.0;
-    private static final double LAUNCH_MOTOR_POWER = 0.7;  // Reduced for better accuracy
+    private static final double INTAKE_MOTOR_POWER = 1.0;
+    private static final double LAUNCH_MOTOR_POWER = 0.7;
     private static final double SPATULA_SERVO_POWER = 0.8;
 
     // Navigation constants
@@ -28,6 +30,18 @@ public class AutoBlue extends LinearOpMode {
     private static final double SLOWDOWN_DISTANCE_FEET = 2.0;
     private static final double POSITION_TOLERANCE_INCHES = 3.0;
     private static final double ANGLE_TOLERANCE_DEGREES = 2.5;
+
+    // FTC 2026 Field dimensions (12ft x 12ft, origin at center)
+    private static final double FIELD_MIN_FEET = -6.0;
+    private static final double FIELD_MAX_FEET = 6.0;
+
+    // Odometry wheel constants (adjust for Estelle)
+    private static final double ODOMETRY_WHEEL_DIAMETER_INCHES = 2.0;
+    private static final double ODOMETRY_TICKS_PER_REV = 8192;
+    private static final double ODOMETRY_INCHES_PER_TICK = 
+            (Math.PI * ODOMETRY_WHEEL_DIAMETER_INCHES) / ODOMETRY_TICKS_PER_REV;
+    private static final double ODOMETRY_TRACK_WIDTH_INCHES = 14.0;
+    private static final double ODOMETRY_FORWARD_OFFSET_INCHES = 4.0;
 
     // AprilTag alignment constants
     private static final double APRILTAG_ALIGNMENT_TOLERANCE = 3.0;  // degrees
@@ -69,9 +83,16 @@ public class AutoBlue extends LinearOpMode {
     private double robotY = 0.0;
     private double robotHeading = 0.0;
 
+    // Odometry tracking variables
+    private int lastLeftEncoderPos = 0;
+    private int lastRightEncoderPos = 0;
+    private int lastStrafeEncoderPos = 0;
+    private boolean odometryInitialized = false;
+
     // Hardware
     private DcMotor frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor;
     private DcMotor intakeMotor, launchMotor, rampMotor;
+    private DcMotorEx leftOdometry, rightOdometry, strafeOdometry;
     private IMU imu;
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
@@ -124,12 +145,12 @@ public class AutoBlue extends LinearOpMode {
 
             telemetry.addLine();
             telemetry.addLine("Target Sequence:");
-            telemetry.addData("  1. Shoot Position", "X: %.1f, Y: %.1f", BLUE_SHOOT_X, BLUE_SHOOT_Y)
+            telemetry.addData("  1. Shoot Position", "X: %.1f, Y: %.1f", BLUE_SHOOT_X, BLUE_SHOOT_Y);
             telemetry.addData("  2. Top Spike", "X: %.1f, Y: %.1f", BLUE_TOP_SPIKE_X, BLUE_TOP_SPIKE_Y);
             telemetry.addData("  3. Shoot Position", "X: %.1f, Y: %.1f", BLUE_SHOOT_X, BLUE_SHOOT_Y);
             telemetry.addData("  4. Middle Spike", "X: %.1f, Y: %.1f", BLUE_MIDDLE_SPIKE_X, BLUE_MIDDLE_SPIKE_Y);
             telemetry.addData("  5. Shoot Position", "X: %.1f, Y: %.1f", BLUE_SHOOT_X, BLUE_SHOOT_Y);
-            telemetry.addData("  6. Lower Spike", "X: %.1f, Y: %.1f", BLUE_LOW_SPIKE_X, BLUE_LOW_SPIKE_Y);
+            telemetry.addData("  6. Lower Spike", "X: %.1f, Y: %.1f", BLUE_LOWER_SPIKE_X, BLUE_LOWER_SPIKE_Y);
             telemetry.addLine("========================================");
             telemetry.update();
 
@@ -278,10 +299,22 @@ public class AutoBlue extends LinearOpMode {
     }
 
     private void driveToPosition(double targetX, double targetY, double targetHeading) {
+        // Validate target is within FTC 2026 field bounds
+        targetX = Range.clip(targetX, FIELD_MIN_FEET, FIELD_MAX_FEET);
+        targetY = Range.clip(targetY, FIELD_MIN_FEET, FIELD_MAX_FEET);
+
         double startTime = getRuntime();
-        double timeout = 5.0;  // 5 second timeout per movement
+        double timeout = 8.0;  // 8 second timeout for longer distances
+
+        // Initialize odometry if not already done
+        if (!odometryInitialized) {
+            resetOdometry();
+        }
 
         while (opModeIsActive() && (getRuntime() - startTime) < timeout) {
+            // Update robot position from odometry
+            updateOdometryPosition();
+
             double deltaX = targetX - robotX;
             double deltaY = targetY - robotY;
             double distanceToTarget = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -292,18 +325,21 @@ public class AutoBlue extends LinearOpMode {
                 break;
             }
 
-            // Calculate angle to target
+            // Calculate angle to target (field-centric)
             double angleToTarget = Math.atan2(deltaX, deltaY);
 
-            // Speed control with slowdown
+            // Speed control with slowdown near target
             double speed = AUTO_MAX_SPEED;
             if (distanceToTarget < SLOWDOWN_DISTANCE_FEET) {
                 double slowdownRatio = distanceToTarget / SLOWDOWN_DISTANCE_FEET;
                 speed = AUTO_MIN_SPEED + (AUTO_MAX_SPEED - AUTO_MIN_SPEED) * slowdownRatio;
             }
 
-            // Convert to robot frame
+            // Get current heading from IMU
             double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+            robotHeading = heading;
+
+            // Convert to robot frame
             double x = Math.sin(angleToTarget - heading) * speed;
             double y = Math.cos(angleToTarget - heading) * speed;
 
@@ -321,11 +357,61 @@ public class AutoBlue extends LinearOpMode {
             telemetry.addData("Current", "X: %.2f, Y: %.2f", robotX, robotY);
             telemetry.addData("Distance", "%.2f ft", distanceToTarget);
             telemetry.addData("Speed", "%.2f", speed);
+            telemetry.addData("Heading", "%.1f°", Math.toDegrees(heading));
             telemetry.update();
         }
 
         stopDriveMotors();
         sleep(100);  // Brief settle time
+    }
+
+    private void resetOdometry() {
+        // Reset encoder positions - use drive motors if no dedicated odometry pods
+        lastLeftEncoderPos = frontLeftMotor.getCurrentPosition();
+        lastRightEncoderPos = frontRightMotor.getCurrentPosition();
+        lastStrafeEncoderPos = backLeftMotor.getCurrentPosition();
+        odometryInitialized = true;
+    }
+
+    private void updateOdometryPosition() {
+        // Get current encoder positions (using drive motors as odometry if no dedicated pods)
+        int leftPos = frontLeftMotor.getCurrentPosition();
+        int rightPos = frontRightMotor.getCurrentPosition();
+        int strafePos = backLeftMotor.getCurrentPosition();
+
+        // Calculate deltas
+        int leftDelta = leftPos - lastLeftEncoderPos;
+        int rightDelta = rightPos - lastRightEncoderPos;
+        int strafeDelta = strafePos - lastStrafeEncoderPos;
+
+        // Update last positions
+        lastLeftEncoderPos = leftPos;
+        lastRightEncoderPos = rightPos;
+        lastStrafeEncoderPos = strafePos;
+
+        // Convert ticks to inches
+        double leftDist = leftDelta * ODOMETRY_INCHES_PER_TICK;
+        double rightDist = rightDelta * ODOMETRY_INCHES_PER_TICK;
+        double strafeDist = strafeDelta * ODOMETRY_INCHES_PER_TICK;
+
+        // Calculate forward and strafe movement
+        double forwardDist = (leftDist + rightDist) / 2.0;
+
+        // Get current heading
+        double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
+        // Convert robot-relative movement to field-relative
+        double deltaXField = (forwardDist * Math.sin(heading) + strafeDist * Math.cos(heading)) / 12.0;
+        double deltaYField = (forwardDist * Math.cos(heading) - strafeDist * Math.sin(heading)) / 12.0;
+
+        // Update robot position (in feet)
+        robotX += deltaXField;
+        robotY += deltaYField;
+        robotHeading = heading;
+
+        // Clamp position to field bounds
+        robotX = Range.clip(robotX, FIELD_MIN_FEET, FIELD_MAX_FEET);
+        robotY = Range.clip(robotY, FIELD_MIN_FEET, FIELD_MAX_FEET);
     }
 
     private void alignWithAprilTag(int targetTagId, double timeout) {
