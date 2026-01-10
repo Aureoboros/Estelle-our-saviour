@@ -543,7 +543,7 @@ public class AutoRedBackML extends LinearOpMode {
         // Mirrored for RED alliance
         double angle = Math.toRadians(-60);  // Opposite direction
         turnToAngle(angle);
-        driveToPosition(2.0, 1.0, angle);     // Mirrored coordinates
+        driveToPosition(2.0, -1.0, angle);     // Mirrored coordinates
         driveToPosition(5.0, -1.0, angle);    // Mirrored coordinates
         intakeMotor.setPower(INTAKE_POWER);
         sleep(4000); // 4 second intake
