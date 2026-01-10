@@ -9,7 +9,7 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.util.Range;
 
 @TeleOp(name="Auto-Aiming with Bump Resistance")
-public class MathLibAim extends LinearOpMode {
+public class MathLibAimPlus extends LinearOpMode {
     
     // Motors
     private DcMotor frontRightMotor, backRightMotor, frontLeftMotor, backLeftMotor;
