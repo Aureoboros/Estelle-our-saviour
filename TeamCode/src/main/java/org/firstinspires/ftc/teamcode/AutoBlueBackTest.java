@@ -120,6 +120,7 @@ public class actualCodeLol {
        shootBalls();
        intakeSpikeBalls(-2.5, -1.0); // THIS IS ASSUMING IT WORKS IN TICKS AND I DON'T EVEN HAVE DURATION OR ANGLE IN HERE
        shootBalls();
+       
        // FINISH
     
     
