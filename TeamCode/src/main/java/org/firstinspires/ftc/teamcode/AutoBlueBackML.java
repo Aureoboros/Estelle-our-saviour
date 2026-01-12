@@ -66,8 +66,8 @@ public class AutoBlueBackML extends LinearOpMode {
     private static final double FIELD_MAX_FEET = 6.0;
 
     // Odometry constants
-    private static final double ODOMETRY_INCHES_PER_TICK = 0.001; // CALIBRATE THIS
-    private static final double COUNTS_PER_MM = 1.0; // CALIBRATE THIS
+    private static final double ODOMETRY_INCHES_PER_TICK = 0.002; // CALIBRATE THIS
+    private static final double COUNTS_PER_MM = 19.894; // CALIBRATE THIS
 
     // Tracking
     private double robotX = 0.0;
