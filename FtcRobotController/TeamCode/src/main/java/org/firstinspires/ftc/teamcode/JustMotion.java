@@ -52,15 +52,16 @@ public class JustMotion extends LinearOpMode {
         // ========== HARDWARE INITIALIZATION ==========
         
         // Drive motors
+
         DcMotor frontLeftMotor = hardwareMap.dcMotor.get("frontLeftMotor");
         DcMotor backLeftMotor = hardwareMap.dcMotor.get("backLeftMotor");
         DcMotor frontRightMotor = hardwareMap.dcMotor.get("frontRightMotor");
         DcMotor backRightMotor = hardwareMap.dcMotor.get("backRightMotor");
-        
+
         // Set motor directions
-        frontLeftMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeftMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-        frontRightMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontRightMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         backRightMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         
         // Configure encoders for drive motors
@@ -116,7 +117,7 @@ public class JustMotion extends LinearOpMode {
         Gamepad previousGamepad2 = new Gamepad();
         
         // Toggle states
-        boolean slowMode = false;
+        boolean slowMode = true;
         boolean fieldCentric = false;
         
         waitForStart();
