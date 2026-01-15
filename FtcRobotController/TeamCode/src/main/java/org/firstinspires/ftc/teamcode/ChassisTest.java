@@ -81,9 +81,9 @@ public class ChassisTest extends LinearOpMode {
         DcMotor yOdo = hardwareMap.dcMotor.get("yOdo");
         
         // Set motor directions
-        frontLeftMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeftMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-        frontRightMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontRightMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         backRightMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         
         // Configure encoders for drive motors
