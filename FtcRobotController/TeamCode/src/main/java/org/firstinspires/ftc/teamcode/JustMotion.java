@@ -232,54 +232,54 @@ public class JustMotion extends LinearOpMode {
                                     currentGamepad2.dpad_left || currentGamepad2.dpad_right;
             
             if (gamepad1Active) {
-                // Joystick control
-                x = currentGamepad1.left_stick_y;
-                y = currentGamepad1.right_stick_x;
+                // Joystick control - FIXED: swapped x and y assignments
+                y = -currentGamepad1.left_stick_y;  // Forward/back (negated for correct direction)
+                x = currentGamepad1.right_stick_x;  // Strafe left/right
                 rx = currentGamepad1.right_trigger - currentGamepad1.left_trigger;
                 
                 // DPAD precision control (overrides joystick)
                 if (currentGamepad1.dpad_up) {
-                    x = -0.3;  // Forward
-                    y = 0;
+                    y = 0.3;  // Forward
+                    x = 0;
                     rx = 0;
                 } else if (currentGamepad1.dpad_down) {
-                    x = 0.3;  // Backward
-                    y = 0;
+                    y = -0.3;  // Backward
+                    x = 0;
                     rx = 0;
                 } else if (currentGamepad1.dpad_left) {
-                    x = 0;
-                    y = -0.3;  // Strafe left
+                    y = 0;
+                    x = -0.3;  // Strafe left
                     rx = 0;
                 } else if (currentGamepad1.dpad_right) {
-                    x = 0;
-                    y = 0.3;  // Strafe right
+                    y = 0;
+                    x = 0.3;  // Strafe right
                     rx = 0;
                 }
                 
                 maxDrivePower = GAMEPAD1_MAX_POWER;
                 activeDriver = "DRIVER 1";
             } else if (gamepad2Active) {
-                // Joystick control
-                x = currentGamepad2.left_stick_y;
-                y = currentGamepad2.right_stick_x;
+                // Joystick control - FIXED: swapped x and y assignments
+                y = -currentGamepad2.left_stick_y;  // Forward/back (negated for correct direction)
+                x = currentGamepad2.right_stick_x;  // Strafe left/right
                 rx = currentGamepad2.right_trigger - currentGamepad2.left_trigger;
                 
                 // DPAD precision control (overrides joystick)
                 if (currentGamepad2.dpad_up) {
-                    x = -0.3;  // Forward
-                    y = 0;
+                    y = 0.3;  // Forward
+                    x = 0;
                     rx = 0;
                 } else if (currentGamepad2.dpad_down) {
-                    x = 0.3;  // Backward
-                    y = 0;
+                    y = -0.3;  // Backward
+                    x = 0;
                     rx = 0;
                 } else if (currentGamepad2.dpad_left) {
-                    x = 0;
-                    y = -0.3;  // Strafe left
+                    y = 0;
+                    x = -0.3;  // Strafe left
                     rx = 0;
                 } else if (currentGamepad2.dpad_right) {
-                    x = 0;
-                    y = 0.3;  // Strafe right
+                    y = 0;
+                    x = 0.3;  // Strafe right
                     rx = 0;
                 }
                 
@@ -325,10 +325,10 @@ public class JustMotion extends LinearOpMode {
             }
             
             // ========== MECANUM DRIVE CALCULATION ==========
-            double frontLeftPower = -y + x + rx;
-            double backLeftPower = -y - x + rx;
-            double frontRightPower = -y - x - rx;
-            double backRightPower = -y + x - rx;
+            double frontLeftPower = y + x + rx;
+            double backLeftPower = y - x + rx;
+            double frontRightPower = y - x - rx;
+            double backRightPower = y + x - rx;
             
             // Normalize and scale
             double maxPower = Math.max(Math.abs(frontLeftPower), Math.abs(backLeftPower));
