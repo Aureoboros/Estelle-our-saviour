@@ -87,7 +87,7 @@ public class AutoRedBackML extends LinearOpMode {
 
     // Hardware
     private DcMotor frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor;
-    private DcMotor intakeMotor, launchMotor, rampMotor;
+    private DcMotor intakeMotor, launchMotor;
     private DcMotor xodo, yodo;
     private Servo spinSpinServo, spatulaServo, stopServo;
     private IMU imu;
@@ -179,24 +179,23 @@ public class AutoRedBackML extends LinearOpMode {
 
     private void initializeHardware() {
         // Initialize drive motors
-        frontLeftMotor = hardwareMap.get(DcMotor.class, "FrontLeftMotor");
-        backLeftMotor = hardwareMap.get(DcMotor.class, "BackLeftMotor");
-        frontRightMotor = hardwareMap.get(DcMotor.class, "FrontRightMotor");
-        backRightMotor = hardwareMap.get(DcMotor.class, "BackRightMotor");
+        frontLeftMotor = hardwareMap.get(DcMotor.class, "frontLeftMotor");
+        backLeftMotor = hardwareMap.get(DcMotor.class, "backLeftMotor");
+        frontRightMotor = hardwareMap.get(DcMotor.class, "frontRightMotor");
+        backRightMotor = hardwareMap.get(DcMotor.class, "backRightMotor");
 
         // Initialize other motors
-        intakeMotor = hardwareMap.get(DcMotor.class, "IntakeMotor");
-        launchMotor = hardwareMap.get(DcMotor.class, "LaunchMotor");
-        rampMotor = hardwareMap.get(DcMotor.class, "RampMotor");
+        intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
+        launchMotor = hardwareMap.get(DcMotor.class, "launchMotor");
 
         // Initialize odometry motors
-        xodo = hardwareMap.get(DcMotor.class, "Xodo");
-        yodo = hardwareMap.get(DcMotor.class, "Yodo");
+        xodo = hardwareMap.get(DcMotor.class, "xOdo");
+        yodo = hardwareMap.get(DcMotor.class, "yOdo");
 
         // Initialize servos
-        spinSpinServo = hardwareMap.get(Servo.class, "SpinSpinServo");
-        spatulaServo = hardwareMap.get(Servo.class, "SpatulaServo");
-        stopServo = hardwareMap.get(Servo.class, "StopServo");
+        spinSpinServo = hardwareMap.get(Servo.class, "spinSpinServo");
+        spatulaServo = hardwareMap.get(Servo.class, "spatulaServo");
+        stopServo = hardwareMap.get(Servo.class, "stopServo");
 
         // Initialize IMU
         imu = hardwareMap.get(IMU.class, "imu");
@@ -212,7 +211,7 @@ public class AutoRedBackML extends LinearOpMode {
 
         // Set motor directions
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
-        backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
+        backRightMotor.setDirection(DcMotor.Direction.REVERSE);
 
         // Reset encoders
         xodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -536,7 +535,6 @@ public class AutoRedBackML extends LinearOpMode {
         stopDriveMotors();
         intakeMotor.setPower(0);
         launchMotor.setPower(0);
-        rampMotor.setPower(0);
     }
 
     private void intakeGateBalls() {
