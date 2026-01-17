@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-@TeleOp(name = "Motion Bump Mode")
+@TeleOp(name = "Motion Only Mode")
 public class MotionBump extends LinearOpMode {
 
     // ========== MOTOR POWER CONSTANTS ==========
