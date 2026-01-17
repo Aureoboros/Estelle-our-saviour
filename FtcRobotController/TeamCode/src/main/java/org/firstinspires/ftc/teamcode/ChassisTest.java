@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.Range;
@@ -276,14 +277,14 @@ public class ChassisTest extends LinearOpMode {
             if (currentTestMode == TestMode.NORMAL_DRIVE) {
                 // ========== NORMAL MECANUM DRIVE ==========
                 if (gamepad1Active) {
-                    x = currentGamepad1.left_stick_y;
-                    y = currentGamepad1.right_stick_x;
+                    y = currentGamepad1.left_stick_y;
+                    x = currentGamepad1.right_stick_x;
                     rx = currentGamepad1.right_trigger - currentGamepad1.left_trigger;
                     maxDrivePower = GAMEPAD1_MAX_POWER;
                     activeDriver = "DRIVER 1";
                 } else if (gamepad2Active) {
-                    x = currentGamepad2.left_stick_y;
-                    y = currentGamepad2.right_stick_x;
+                    y = currentGamepad2.left_stick_y;
+                    x = currentGamepad2.right_stick_x;
                     rx = currentGamepad2.right_trigger - currentGamepad2.left_trigger;
                     maxDrivePower = GAMEPAD2_MAX_POWER;
                     activeDriver = "DRIVER 2";
@@ -389,7 +390,6 @@ public class ChassisTest extends LinearOpMode {
                 telemetry.addLine("Use LEFT STICK Y to control test motor(s)");
             }
             telemetry.addLine();
-            
             telemetry.addLine("--- Position (Odometry) ---");
             telemetry.addData("X Position", "%.2f inches", robotX);
             telemetry.addData("Y Position", "%.2f inches", robotY);

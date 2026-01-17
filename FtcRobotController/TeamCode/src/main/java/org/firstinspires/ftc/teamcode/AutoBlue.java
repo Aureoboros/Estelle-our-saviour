@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -96,6 +97,7 @@ public class AutoBlue extends LinearOpMode {
     private IMU imu;
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private Servo spinSpinServo, spatulaServo, stopServo;
 
     @Override
     public void runOpMode() throws InterruptedException {

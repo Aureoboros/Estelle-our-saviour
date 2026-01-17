@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
@@ -42,6 +43,7 @@ public class JustMotion extends LinearOpMode {
     private int lastBLEncoder = 0;
     private int lastFREncoder = 0;
     private int lastBREncoder = 0;
+    private double currentPos;
     
     // Speed preset state
     private enum SpeedMode { SLOW, MEDIUM, FAST }
@@ -57,6 +59,12 @@ public class JustMotion extends LinearOpMode {
         DcMotor backLeftMotor = hardwareMap.dcMotor.get("backLeftMotor");
         DcMotor frontRightMotor = hardwareMap.dcMotor.get("frontRightMotor");
         DcMotor backRightMotor = hardwareMap.dcMotor.get("backRightMotor");
+        DcMotor intakeMotor = hardwareMap.dcMotor.get("intakeMotor");
+        DcMotor launchMotor = hardwareMap.dcMotor.get("launchMotor");
+        intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        launchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        launchMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // Set motor directions
         frontLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -88,7 +96,12 @@ public class JustMotion extends LinearOpMode {
                 RevHubOrientationOnRobot.UsbFacingDirection.FORWARD));
         imu.initialize(parameters);
         imu.resetYaw();
-        
+
+        // Initialize servos
+        Servo spinSpinServo = hardwareMap.get(Servo.class, "spinSpinServo");
+        Servo spatulaServo = hardwareMap.get(Servo.class, "spatulaServo");
+        Servo stopServo = hardwareMap.get(Servo.class, "stopServo");
+
         // ========== INIT TELEMETRY ==========
         telemetry.addLine("========================================");
         telemetry.addLine("DRIVE ONLY MODE");
@@ -194,6 +207,15 @@ public class JustMotion extends LinearOpMode {
             if (leftBumperPressed) {
                 imu.resetYaw();
                 robotHeading = 0.0;
+
+                //TEST CODES Just for testing in one class
+            //    currentPos = spinSpinServo.getPosition();
+            //    spinSpinServo.setPosition(0.5);
+            //    sleep(1000);
+            //    spinSpinServo.setPosition(1);
+            //    launchMotor.setPower(1);
+            //    intakeMotor.setPower(1);
+
             }
             
             // ========== RIGHT BUMPER - SNAP TO 0° ==========
@@ -233,26 +255,26 @@ public class JustMotion extends LinearOpMode {
             
             if (gamepad1Active) {
                 // Joystick control
-                x = currentGamepad1.left_stick_y;
-                y = currentGamepad1.right_stick_x;
+                y = currentGamepad1.left_stick_y;
+                x = currentGamepad1.right_stick_x;
                 rx = currentGamepad1.right_trigger - currentGamepad1.left_trigger;
                 
                 // DPAD precision control (overrides joystick)
                 if (currentGamepad1.dpad_up) {
-                    x = -0.3;  // Forward
-                    y = 0;
+                    y = -0.3;  // Forward
+                    x = 0;
                     rx = 0;
                 } else if (currentGamepad1.dpad_down) {
-                    x = 0.3;  // Backward
-                    y = 0;
+                    y = 0.3;  // Backward
+                    x = 0;
                     rx = 0;
                 } else if (currentGamepad1.dpad_left) {
-                    x = 0;
-                    y = -0.3;  // Strafe left
+                    y = 0;
+                    x = -0.3;  // Strafe left
                     rx = 0;
                 } else if (currentGamepad1.dpad_right) {
-                    x = 0;
-                    y = 0.3;  // Strafe right
+                    y = 0;
+                    x = 0.3;  // Strafe right
                     rx = 0;
                 }
                 
@@ -260,26 +282,26 @@ public class JustMotion extends LinearOpMode {
                 activeDriver = "DRIVER 1";
             } else if (gamepad2Active) {
                 // Joystick control
-                x = currentGamepad2.left_stick_y;
-                y = currentGamepad2.right_stick_x;
+                y = currentGamepad2.left_stick_y;
+                x = currentGamepad2.right_stick_x;
                 rx = currentGamepad2.right_trigger - currentGamepad2.left_trigger;
                 
                 // DPAD precision control (overrides joystick)
                 if (currentGamepad2.dpad_up) {
-                    x = -0.3;  // Forward
-                    y = 0;
+                    y = -0.3;  // Forward
+                    x = 0;
                     rx = 0;
                 } else if (currentGamepad2.dpad_down) {
-                    x = 0.3;  // Backward
-                    y = 0;
+                    y = 0.3;  // Backward
+                    x = 0;
                     rx = 0;
                 } else if (currentGamepad2.dpad_left) {
-                    x = 0;
-                    y = -0.3;  // Strafe left
+                    y = 0;
+                    x = -0.3;  // Strafe left
                     rx = 0;
                 } else if (currentGamepad2.dpad_right) {
-                    x = 0;
-                    y = 0.3;  // Strafe right
+                    y = 0;
+                    x = 0.3;  // Strafe right
                     rx = 0;
                 }
                 
@@ -387,6 +409,8 @@ public class JustMotion extends LinearOpMode {
             telemetry.addLine("LB = Reset Heading | RB = Snap to 0°");
             telemetry.addLine("BACK = Reset Position");
             telemetry.addLine("DPAD = Precision Movement");
+
+            telemetry.addData("Spin = ", "%.2f", currentPos);
             
             telemetry.update();
         }
