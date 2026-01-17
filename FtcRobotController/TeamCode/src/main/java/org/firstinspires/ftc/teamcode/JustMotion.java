@@ -212,6 +212,8 @@ public class JustMotion extends LinearOpMode {
             //    currentPos = spinSpinServo.getPosition();
             //    spinSpinServo.setPosition(0.5);
             //    sleep(1000);
+            //    spinSpinServo.setPosition(0);
+            //    sleep(1000);
             //    spinSpinServo.setPosition(1);
             //    launchMotor.setPower(1);
             //    intakeMotor.setPower(1);
