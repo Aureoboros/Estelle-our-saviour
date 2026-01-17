@@ -209,6 +209,12 @@ public class JustMotion extends LinearOpMode {
                 robotHeading = 0.0;
 
                 //TEST CODES Just for testing in one class
+                currentPos = spatulaServo.getPosition();
+                spatulaServo.setPosition(0.5);
+                sleep(1000);
+                spatulaServo.setPosition(0);
+                sleep(1000);
+                spatulaServo.setPosition(1);
             //    currentPos = spinSpinServo.getPosition();
             //    spinSpinServo.setPosition(0.5);
             //    sleep(1000);
