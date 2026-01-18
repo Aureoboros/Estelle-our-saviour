@@ -123,45 +123,57 @@ public class AutoBlueBackML extends LinearOpMode {
         driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
         autoAimAndShoot();
 
-        // 2. Intake middle spike
-        telemetry.addData("Step 2", "Intake Middle Spike");
+
+        // 4. Intake gate, shoot balls, repeat
+        // for (int i = 0; i < 4; i++) {
+        //     telemetry.addData("Loop Iteration", i + 1);
+        //     telemetry.update();
+            
+        //     // Intake gate
+        //     telemetry.addData("Loop Step 1", "Intake Gate");
+        //     telemetry.update();
+        //     intakeGateBalls();
+
+        //     // Shoot balls
+        //     telemetry.addData("Loop Step 2", "Navigate and Shoot Balls");
+        //     telemetry.update();
+        //     driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
+        //     autoAimAndShoot();
+        // }
+
+        // 5. Intake top spike
+
+        telemetry.addData("Step 2", "Intake Lower Spike");
         telemetry.update();
-        intakeSpikeBalls(BLUE_MIDDLE_SPIKE_X, BLUE_MIDDLE_SPIKE_Y, 0);
+        intakeSpikeBalls(BLUE_LOWER_SPIKE_X, BLUE_LOWER_SPIKE_Y, 0);
 
         // 3. Shoot balls with auto-aim
         telemetry.addData("Step 3", "Navigate and Shoot Balls");
         telemetry.update();
         driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
         autoAimAndShoot();
-
-        // 4. Intake gate, shoot balls, repeat
-        for (int i = 0; i < 4; i++) {
-            telemetry.addData("Loop Iteration", i + 1);
-            telemetry.update();
-            
-            // Intake gate
-            telemetry.addData("Loop Step 1", "Intake Gate");
-            telemetry.update();
-            intakeGateBalls();
-
-            // Shoot balls
-            telemetry.addData("Loop Step 2", "Navigate and Shoot Balls");
-            telemetry.update();
-            driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
-            autoAimAndShoot();
-        }
-
-        // 5. Intake top spike
-        telemetry.addData("Step 5", "Intake Top Spike");
+        
+        telemetry.addData("Step 4", "Intake Middle Spike");
         telemetry.update();
-        intakeSpikeBalls(BLUE_TOP_SPIKE_X, BLUE_TOP_SPIKE_Y, 0);
+        intakeSpikeBalls(BLUE_MIDDLE_SPIKE_X, BLUE_MIDDLE_SPIKE_Y, 0);
 
-        // 6. Final shoot
-        telemetry.addData("Step 6", "Final Shoot");
+        // 3. Shoot balls with auto-aim
+        telemetry.addData("Step 5", "Navigate and Shoot Balls");
         telemetry.update();
         driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
         autoAimAndShoot();
 
+        telemetry.addData("Step 6", "Intake Top Spike");
+        telemetry.update();
+        intakeSpikeBalls(BLUE_TOP_SPIKE_X, BLUE_TOP_SPIKE_Y, 0);
+
+        telemetry.addData("Step 7", "Navigate and Shoot Balls");
+        telemetry.update();
+        driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
+        autoAimAndShoot();
+        
+                // 2. Intake middle spike
+        
         // Stop all motors
         stopAllMotors();
 
