@@ -13,12 +13,12 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-
+// Buttons as per https://docs.google.com/document/d/1_6g9IvvFj1Ofdy_aqY4_loDmhZa_UZqgFy8Ihcow7NI/edit?tab=t.0
 @TeleOp(name = "TeleOpTourney")
 public class TeleOpTourney extends LinearOpMode {
 
     // Motor power constants
-    private static final double INTAKE_POWER = 1.0;
+    private static final double INTAKE_POWER = -1.0;
     private static final double LAUNCH_MOTOR_POWER = 0.7;
     private static final double SPATULA_SERVO_POWER = 0.8;
 
@@ -124,6 +124,14 @@ public class TeleOpTourney extends LinearOpMode {
     private enum SpeedMode { SLOW, MEDIUM, FAST }
     private TeleOpTourney.SpeedMode currentSpeedMode = TeleOpTourney.SpeedMode.FAST;
 
+    private double launchMotorPowerAdjust = SPEED_FAST;
+
+    private int togglestopper = 1; // B toggle to open/close stopper, default close
+
+    private int toggleintake = 1; // Y toggle intake default started
+
+    private int togglespatula = 0; // toggle spatula, default down
+
     @Override
     public void runOpMode() throws InterruptedException {
         initializeHardware();
@@ -172,21 +180,44 @@ public class TeleOpTourney extends LinearOpMode {
 
             // ========== START BUTTON - SLOW MODE TOGGLE ==========
             if (startPressed) {
-                slowMode = !slowMode;
+                if (togglespatula == 1) {
+                    spatulaServo.setPosition(0);
+                    togglespatula = 0;
+                }
+                else {
+                    spatulaServo.setPosition(1);
+                    togglespatula = 1;
+                }
             }
 
             // ========== Y BUTTON - FIELD CENTRIC TOGGLE ==========
             if (yPressed) {
-                fieldCentric = !fieldCentric;
+                if (toggleintake == 1) {
+                    intakeMotor.setPower(INTAKE_POWER);
+                    toggleintake = 0;
+                }
+                else {
+                    intakeMotor.setPower(0);
+                    toggleintake = 1;
+                }
             }
 
             // ========== A/B/X BUTTONS - SPEED PRESETS ==========
             if (aPressed) {
                 currentSpeedMode = TeleOpTourney.SpeedMode.SLOW;
-            } else if (bPressed) {
-                currentSpeedMode = TeleOpTourney.SpeedMode.MEDIUM;
-            } else if (xPressed) {
-                currentSpeedMode = TeleOpTourney.SpeedMode.FAST;
+            }
+            if (bPressed) {
+                if (togglestopper == 1) {
+                    stopServo.setPosition(0);
+                    togglestopper = 0;
+                }
+                else {
+                    stopServo.setPosition(1);
+                    togglestopper = 1;
+                }
+            }
+            if (xPressed) {
+                launchBalls(3);
             }
 
             // ========== BACK BUTTON - RESET ODOMETRY ==========
@@ -213,22 +244,6 @@ public class TeleOpTourney extends LinearOpMode {
             if (leftBumperPressed) {
                 imu.resetYaw();
                 robotHeading = 0.0;
-
-                //TEST CODES Just for testing in one class
-                currentPos = spatulaServo.getPosition();
-                spatulaServo.setPosition(0.5);
-                sleep(1000);
-                spatulaServo.setPosition(0);
-                sleep(1000);
-                spatulaServo.setPosition(1);
-                //    currentPos = spinSpinServo.getPosition();
-                //    spinSpinServo.setPosition(0.5);
-                //    sleep(1000);
-                //    spinSpinServo.setPosition(0);
-                //    sleep(1000);
-                //    spinSpinServo.setPosition(1);
-                //    launchMotor.setPower(1);
-                //    intakeMotor.setPower(1);
 
             }
 
@@ -430,7 +445,7 @@ public class TeleOpTourney extends LinearOpMode {
 
         }
 
-        }
+    }
 
     private void initializeHardware() {
         // Initialize drive motors
@@ -466,7 +481,7 @@ public class TeleOpTourney extends LinearOpMode {
 
         // Set motor directions
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
-        backRightMotor.setDirection(DcMotor.Direction.REVERSE);
+        frontRightMotor.setDirection(DcMotor.Direction.REVERSE);
 
         // Reset encoders
         xodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -475,9 +490,9 @@ public class TeleOpTourney extends LinearOpMode {
         yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // Initialize servo positions
-        stopServo.setPosition(1.0); // Closed
-        spatulaServo.setPosition(0.0); // Down
-        spinSpinServo.setPosition(0.0);
+        stopServo.setPosition(0.0); // Closed
+        spatulaServo.setPosition(1.0); // Down
+        spinSpinServo.setPosition(0.2); // Stop the spinservo to turn too far
 
 
         // ========== INIT TELEMETRY ==========
@@ -659,20 +674,23 @@ public class TeleOpTourney extends LinearOpMode {
     }
 
     private void launchBalls(int count) {
+        launchMotor.setPower(LAUNCH_MOTOR_POWER);
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
-            stopServo.setPosition(0.0);
+            stopServo.setPosition(1.0);
             sleep(100);
+            // Close stopper to stop other balls from going under the spatula
+            stopServo.setPosition(0.0);
 
             // Actuate spatula to push ball
-            spatulaServo.setPosition(1.0);
-            sleep(300);
             spatulaServo.setPosition(0.0);
+            sleep(300);
+            spatulaServo.setPosition(1.0);
             sleep(200);
 
             // Close stopper
-            stopServo.setPosition(1.0);
-            sleep(200);
+            //stopServo.setPosition(1.0);
+            //sleep(200);
         }
     }
 
