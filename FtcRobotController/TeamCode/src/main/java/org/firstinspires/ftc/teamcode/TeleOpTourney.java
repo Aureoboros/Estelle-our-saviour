@@ -440,6 +440,13 @@ public class TeleOpTourney extends LinearOpMode {
             telemetry.addLine("DPAD = Precision Movement");
 
             telemetry.addData("Spin = ", "%.2f", currentPos);
+            telemetry.addLine();
+
+            telemetry.addLine("--- Odometry Pods ---");
+            telemetry.addData("xOdo Position", "%d ticks", getXOdoPosition());
+            telemetry.addData("yOdo Position", "%d ticks", getYOdoPosition());
+            telemetry.addData("xOdo Inches", "%.2f in", getXOdoInches());
+            telemetry.addData("yOdo Inches", "%.2f in", getYOdoInches());
 
             telemetry.update();
 
@@ -902,6 +909,277 @@ public class TeleOpTourney extends LinearOpMode {
         backLeftMotor.setPower(backLeftPower);
         frontRightMotor.setPower(frontRightPower);
         backRightMotor.setPower(backRightPower);
+    }
+
+    // ========== ODOMETRY POD API ==========
+
+    /**
+     * Gets the raw encoder position from the X odometry pod.
+     * @return Current encoder tick count from xOdo
+     */
+    public int getXOdoPosition() {
+        return xodo.getCurrentPosition();
+    }
+
+    /**
+     * Gets the raw encoder position from the Y odometry pod.
+     * @return Current encoder tick count from yOdo
+     */
+    public int getYOdoPosition() {
+        return yodo.getCurrentPosition();
+    }
+
+    /**
+     * Gets the X odometry pod position converted to inches.
+     * @return X odometry position in inches
+     */
+    public double getXOdoInches() {
+        return xodo.getCurrentPosition() * ODOMETRY_INCHES_PER_TICK;
+    }
+
+    /**
+     * Gets the Y odometry pod position converted to inches.
+     * @return Y odometry position in inches
+     */
+    public double getYOdoInches() {
+        return yodo.getCurrentPosition() * ODOMETRY_INCHES_PER_TICK;
+    }
+
+    /**
+     * Resets both odometry pod encoders to zero.
+     */
+    public void resetOdometryPods() {
+        xodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        yodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        xodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    }
+
+    // ========== ODOMETRY WHEEL NAVIGATION API ==========
+
+    /**
+     * Drives the robot to a specific position on the FTC 2026 field using xOdo and yOdo wheels.
+     * Uses a PID-like control loop for smooth and accurate positioning.
+     *
+     * FTC 2026 Field Coordinates:
+     * - Origin (0, 0) is at field center
+     * - X-axis: positive toward red alliance wall, negative toward blue
+     * - Y-axis: positive toward audience, negative toward scoring tables
+     * - Field size: 12ft x 12ft (-6ft to +6ft on each axis)
+     *
+     * @param targetXInches Target X position in inches from field center
+     * @param targetYInches Target Y position in inches from field center
+     * @param targetHeadingDeg Target heading in degrees (0 = forward, positive = CCW)
+     * @param maxSpeed Maximum drive speed (0.0 to 1.0)
+     * @param timeoutSeconds Maximum time to reach target before giving up
+     * @return true if position reached within tolerance, false if timed out
+     */
+    public boolean driveToPositionOdoWheels(double targetXInches, double targetYInches,
+                                            double targetHeadingDeg, double maxSpeed,
+                                            double timeoutSeconds) {
+        // Field bounds in inches (12ft x 12ft field = 144in x 144in)
+        final double FIELD_MIN_INCHES = -72.0;
+        final double FIELD_MAX_INCHES = 72.0;
+
+        // Position tolerances
+        final double POSITION_TOLERANCE = 1.0; // inches
+        final double HEADING_TOLERANCE = 2.0;  // degrees
+
+        // PID-like control gains
+        final double KP_DRIVE = 0.03;    // Proportional gain for position
+        final double KP_HEADING = 0.02;  // Proportional gain for heading
+        final double MIN_POWER = 0.15;   // Minimum power to overcome friction
+        final double SLOWDOWN_DIST = 12.0; // Start slowing down at 12 inches
+
+        // Clamp target to field bounds
+        targetXInches = Range.clip(targetXInches, FIELD_MIN_INCHES, FIELD_MAX_INCHES);
+        targetYInches = Range.clip(targetYInches, FIELD_MIN_INCHES, FIELD_MAX_INCHES);
+
+        // Convert target heading to radians
+        double targetHeadingRad = Math.toRadians(targetHeadingDeg);
+
+        // Reset odometry pods to establish current position as origin
+        resetOdometryPods();
+
+        // Calculate initial position offsets from odometry
+        double startXOdo = getXOdoInches();
+        double startYOdo = getYOdoInches();
+
+        double startTime = getRuntime();
+        boolean targetReached = false;
+
+        while (opModeIsActive() && (getRuntime() - startTime) < timeoutSeconds && !targetReached) {
+            // Read current position from odometry wheels
+            double currentXInches = getXOdoInches() - startXOdo;
+            double currentYInches = getYOdoInches() - startYOdo;
+            double currentHeadingRad = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+            double currentHeadingDeg = Math.toDegrees(currentHeadingRad);
+
+            // Calculate position errors
+            double errorX = targetXInches - currentXInches;
+            double errorY = targetYInches - currentYInches;
+            double distance = Math.sqrt(errorX * errorX + errorY * errorY);
+
+            // Calculate heading error (normalized to -180 to 180)
+            double headingError = targetHeadingDeg - currentHeadingDeg;
+            while (headingError > 180) headingError -= 360;
+            while (headingError < -180) headingError += 360;
+
+            // Check if target reached
+            if (distance < POSITION_TOLERANCE && Math.abs(headingError) < HEADING_TOLERANCE) {
+                targetReached = true;
+                break;
+            }
+
+            // Calculate drive angle in field frame
+            double angleToTarget = Math.atan2(errorX, errorY);
+
+            // Speed scaling based on distance (slow down as we approach target)
+            double speedScale = maxSpeed;
+            if (distance < SLOWDOWN_DIST) {
+                speedScale = MIN_POWER + (maxSpeed - MIN_POWER) * (distance / SLOWDOWN_DIST);
+            }
+
+            // Convert field-centric movement to robot-centric
+            double robotAngle = angleToTarget - currentHeadingRad;
+            double driveX = Math.sin(robotAngle) * speedScale * KP_DRIVE * distance;
+            double driveY = Math.cos(robotAngle) * speedScale * KP_DRIVE * distance;
+
+            // Clamp drive powers
+            driveX = Range.clip(driveX, -maxSpeed, maxSpeed);
+            driveY = Range.clip(driveY, -maxSpeed, maxSpeed);
+
+            // Apply minimum power if needed to overcome friction
+            if (distance > POSITION_TOLERANCE) {
+                if (Math.abs(driveX) < MIN_POWER && Math.abs(driveX) > 0.01) {
+                    driveX = Math.signum(driveX) * MIN_POWER;
+                }
+                if (Math.abs(driveY) < MIN_POWER && Math.abs(driveY) > 0.01) {
+                    driveY = Math.signum(driveY) * MIN_POWER;
+                }
+            }
+
+            // Heading correction
+            double rotationPower = headingError * KP_HEADING;
+            rotationPower = Range.clip(rotationPower, -maxSpeed * 0.5, maxSpeed * 0.5);
+
+            // Calculate mecanum wheel powers
+            double frontLeftPower = -driveY + driveX + rotationPower;
+            double backLeftPower = -driveY - driveX + rotationPower;
+            double frontRightPower = -driveY - driveX - rotationPower;
+            double backRightPower = -driveY + driveX - rotationPower;
+
+            // Normalize motor powers
+            double maxPower = Math.max(Math.abs(frontLeftPower), Math.abs(backLeftPower));
+            maxPower = Math.max(maxPower, Math.abs(frontRightPower));
+            maxPower = Math.max(maxPower, Math.abs(backRightPower));
+
+            if (maxPower > maxSpeed) {
+                double scale = maxSpeed / maxPower;
+                frontLeftPower *= scale;
+                backLeftPower *= scale;
+                frontRightPower *= scale;
+                backRightPower *= scale;
+            }
+
+            // Set motor powers
+            frontLeftMotor.setPower(frontLeftPower);
+            backLeftMotor.setPower(backLeftPower);
+            frontRightMotor.setPower(frontRightPower);
+            backRightMotor.setPower(backRightPower);
+
+            // Update telemetry
+            telemetry.addLine("--- Odo Wheel Navigation ---");
+            telemetry.addData("Target", "X: %.1f, Y: %.1f, H: %.1f°",
+                    targetXInches, targetYInches, targetHeadingDeg);
+            telemetry.addData("Current", "X: %.1f, Y: %.1f, H: %.1f°",
+                    currentXInches, currentYInches, currentHeadingDeg);
+            telemetry.addData("Distance", "%.2f in", distance);
+            telemetry.addData("Heading Error", "%.1f°", headingError);
+            telemetry.addData("xOdo Raw", "%d ticks", getXOdoPosition());
+            telemetry.addData("yOdo Raw", "%d ticks", getYOdoPosition());
+            telemetry.update();
+        }
+
+        // Stop all motors
+        stopDriveMotors();
+
+        return targetReached;
+    }
+
+    /**
+     * Simplified version: drives to position with default speed and timeout.
+     * @param targetXInches Target X position in inches from field center
+     * @param targetYInches Target Y position in inches from field center
+     * @return true if position reached, false if timed out
+     */
+    public boolean driveToPositionOdoWheels(double targetXInches, double targetYInches) {
+        return driveToPositionOdoWheels(targetXInches, targetYInches, 0.0, 0.5, 5.0);
+    }
+
+    /**
+     * Version with heading control and default speed/timeout.
+     * @param targetXInches Target X position in inches from field center
+     * @param targetYInches Target Y position in inches from field center
+     * @param targetHeadingDeg Target heading in degrees
+     * @return true if position reached, false if timed out
+     */
+    public boolean driveToPositionOdoWheels(double targetXInches, double targetYInches,
+                                            double targetHeadingDeg) {
+        return driveToPositionOdoWheels(targetXInches, targetYInches, targetHeadingDeg, 0.5, 5.0);
+    }
+
+    /**
+     * Drives to a named field position for FTC 2026 DECODE season.
+     * Predefined positions are relative to field center.
+     *
+     * @param positionName One of: "RED_LOWER_SPIKE", "RED_MIDDLE_SPIKE", "RED_TOP_SPIKE",
+     *                     "RED_SHOOT", "OBELISK", "RED_START", "CENTER"
+     * @return true if position reached, false if timed out or invalid position
+     */
+    public boolean driveToFieldPosition(String positionName) {
+        double targetX, targetY;
+
+        switch (positionName.toUpperCase()) {
+            case "RED_LOWER_SPIKE":
+                targetX = RED_LOWER_SPIKE_X * 12.0;  // Convert feet to inches
+                targetY = RED_LOWER_SPIKE_Y * 12.0;
+                break;
+            case "RED_MIDDLE_SPIKE":
+                targetX = RED_MIDDLE_SPIKE_X * 12.0;
+                targetY = RED_MIDDLE_SPIKE_Y * 12.0;
+                break;
+            case "RED_TOP_SPIKE":
+                targetX = RED_TOP_SPIKE_X * 12.0;
+                targetY = RED_TOP_SPIKE_Y * 12.0;
+                break;
+            case "RED_SHOOT":
+                targetX = RED_SHOOT_X * 12.0;
+                targetY = RED_SHOOT_Y * 12.0;
+                break;
+            case "OBELISK":
+                targetX = OBELISK_X * 12.0;
+                targetY = OBELISK_Y * 12.0;
+                break;
+            case "RED_START":
+                targetX = RED_DEFAULT_START_X * 12.0;
+                targetY = RED_DEFAULT_START_Y * 12.0;
+                break;
+            case "CENTER":
+                targetX = 0.0;
+                targetY = 0.0;
+                break;
+            default:
+                telemetry.addData("Error", "Unknown position: %s", positionName);
+                telemetry.update();
+                return false;
+        }
+
+        telemetry.addData("Navigating to", positionName);
+        telemetry.addData("Target", "X: %.1f in, Y: %.1f in", targetX, targetY);
+        telemetry.update();
+
+        return driveToPositionOdoWheels(targetX, targetY);
     }
 
 }
