@@ -204,7 +204,7 @@ public class TeleOpTourney extends LinearOpMode {
 
             // ========== A/B/X BUTTONS - SPEED PRESETS ==========
             if (aPressed) {
-                currentSpeedMode = TeleOpTourney.SpeedMode.SLOW;
+                driveToPosition(0,0,0);
             }
             if (bPressed) {
                 if (togglestopper == 1) {
@@ -725,5 +725,183 @@ public class TeleOpTourney extends LinearOpMode {
     private double applyDeadzone(double value) {
         return Math.abs(value) < JOYSTICK_DEADZONE ? 0 : value;
     }
-}
 
+
+    private void driveToPosition(double targetX, double targetY, double targetHeading) {
+        // Validate target is within FTC 2026 field bounds
+        targetX = Range.clip(targetX, FIELD_MIN_FEET, FIELD_MAX_FEET);
+        targetY = Range.clip(targetY, FIELD_MIN_FEET, FIELD_MAX_FEET);
+
+        double startTime = getRuntime();
+        double timeout = 8.0;  // 8 second timeout for longer distances
+
+        // Initialize odometry if not already done
+        if (!odometryInitialized) {
+            resetOdometry();
+        }
+
+        while (opModeIsActive() && (getRuntime() - startTime) < timeout) {
+            // Update robot position from odometry
+            updateOdometryPosition();
+
+            double deltaX = targetX - robotX;
+            double deltaY = targetY - robotY;
+            double distanceToTarget = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            // Check if reached target
+            if (distanceToTarget * 12 < POSITION_TOLERANCE_INCHES) {
+                stopDriveMotors();
+                break;
+            }
+
+            // Calculate angle to target (field-centric)
+            double angleToTarget = Math.atan2(deltaX, deltaY);
+
+            // Speed control with slowdown near target
+            double speed = AUTO_MAX_SPEED;
+            if (distanceToTarget < SLOWDOWN_DISTANCE_FEET) {
+                double slowdownRatio = distanceToTarget / SLOWDOWN_DISTANCE_FEET;
+                speed = AUTO_MIN_SPEED + (AUTO_MAX_SPEED - AUTO_MIN_SPEED) * slowdownRatio;
+            }
+
+            // Get current heading from IMU
+            double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+            robotHeading = heading;
+
+            // Convert to robot frame
+            double x = Math.sin(angleToTarget - heading) * speed;
+            double y = Math.cos(angleToTarget - heading) * speed;
+
+            // Calculate heading correction
+            double headingError = targetHeading - heading;
+            while (headingError > Math.PI) headingError -= 2 * Math.PI;
+            while (headingError < -Math.PI) headingError += 2 * Math.PI;
+            double rx = headingError * 0.5;  // Proportional heading control
+
+            // Drive
+            driveFieldCentric(x, y, rx, heading);
+
+            // Telemetry
+            telemetry.addData("Target", "X: %.2f, Y: %.2f", targetX, targetY);
+            telemetry.addData("Current", "X: %.2f, Y: %.2f", robotX, robotY);
+            telemetry.addData("Distance", "%.2f ft", distanceToTarget);
+            telemetry.addData("Speed", "%.2f", speed);
+            telemetry.addData("Heading", "%.1f°", Math.toDegrees(heading));
+            telemetry.update();
+        }
+
+        stopDriveMotors();
+        sleep(100);  // Brief settle time
+    }
+
+    private void resetOdometry() {
+        // Reset encoder positions - use drive motors if no dedicated odometry pods
+        lastLeftEncoderPos = frontLeftMotor.getCurrentPosition();
+        lastRightEncoderPos = frontRightMotor.getCurrentPosition();
+        lastStrafeEncoderPos = backLeftMotor.getCurrentPosition();
+        odometryInitialized = true;
+    }
+
+    private void updateOdometryPosition() {
+        // Get current encoder positions (using drive motors as odometry if no dedicated pods)
+        int leftPos = frontLeftMotor.getCurrentPosition();
+        int rightPos = frontRightMotor.getCurrentPosition();
+        int strafePos = backLeftMotor.getCurrentPosition();
+
+        // Calculate deltas
+        int leftDelta = leftPos - lastLeftEncoderPos;
+        int rightDelta = rightPos - lastRightEncoderPos;
+        int strafeDelta = strafePos - lastStrafeEncoderPos;
+
+        // Update last positions
+        lastLeftEncoderPos = leftPos;
+        lastRightEncoderPos = rightPos;
+        lastStrafeEncoderPos = strafePos;
+
+        // Convert ticks to inches
+        double leftDist = leftDelta * ODOMETRY_INCHES_PER_TICK;
+        double rightDist = rightDelta * ODOMETRY_INCHES_PER_TICK;
+        double strafeDist = strafeDelta * ODOMETRY_INCHES_PER_TICK;
+
+        // Calculate forward and strafe movement
+        double forwardDist = (leftDist + rightDist) / 2.0;
+
+        // Get current heading
+        double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
+        // Convert robot-relative movement to field-relative
+        double deltaXField = (forwardDist * Math.sin(heading) + strafeDist * Math.cos(heading)) / 12.0;
+        double deltaYField = (forwardDist * Math.cos(heading) - strafeDist * Math.sin(heading)) / 12.0;
+
+        // Update robot position (in feet)
+        robotX += deltaXField;
+        robotY += deltaYField;
+        robotHeading = heading;
+
+        // Clamp position to field bounds
+        robotX = Range.clip(robotX, FIELD_MIN_FEET, FIELD_MAX_FEET);
+        robotY = Range.clip(robotY, FIELD_MIN_FEET, FIELD_MAX_FEET);
+    }
+
+    private void stopDriveMotors () {
+        frontLeftMotor.setPower(0);
+        backLeftMotor.setPower(0);
+        frontRightMotor.setPower(0);
+        backRightMotor.setPower(0);
+    }
+
+    private void stopAllMotors () {
+        stopDriveMotors();
+        intakeMotor.setPower(0);
+        launchMotor.setPower(0);
+    }
+
+    private void driveFieldCentric ( double x, double y, double rx, double botHeading){
+        // Field-centric transformation
+        double rotX = x * Math.cos(-botHeading) - y * Math.sin(-botHeading);
+        double rotY = x * Math.sin(-botHeading) + y * Math.cos(-botHeading);
+
+        rotX = rotX * 1.1;  // Strafe correction
+
+        // Calculate motor powers
+        //double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+        //double frontLeftPower = (rotY + rotX + rx) / denominator;
+        //double backLeftPower = (rotY - rotX + rx) / denominator;
+        //double frontRightPower = (rotY - rotX - rx) / denominator;
+        //double backRightPower = (rotY + rotX - rx) / denominator;
+
+
+        double frontLeftPower = -rotY + rotX + rx;
+        double backLeftPower = -rotY - rotX + rx;  // Inverted y for proper strafe
+        double frontRightPower = -rotY - rotX - rx;
+        double backRightPower = -rotY + rotX - rx;  // Inverted y for proper strafe
+
+        // Find the maximum absolute power to maintain proportional relationships
+        double maxPower = Math.max(Math.abs(frontLeftPower), Math.abs(backLeftPower));
+        maxPower = Math.max(maxPower, Math.abs(frontRightPower));
+        maxPower = Math.max(maxPower, Math.abs(backRightPower));
+
+        // Scale down proportionally if any power exceeds maxDrivePower
+        // This preserves the motor power ratios while respecting the power limit
+        if (maxPower > 1.0) {
+            double scale = 1.0 / maxPower;
+            frontLeftPower *= scale;
+            backLeftPower *= scale;
+            frontRightPower *= scale;
+            backRightPower *= scale;
+        }
+
+        // Clamp all motor powers to ±0.5 to ensure they never exceed the limit
+        frontLeftPower = Range.clip(frontLeftPower, -0.5, 0.5);
+        backLeftPower = Range.clip(backLeftPower, -0.5, 0.5);
+        frontRightPower = Range.clip(frontRightPower, -0.5, 0.5);
+        backRightPower = Range.clip(backRightPower, -0.5, 0.5);
+
+
+        frontLeftMotor.setPower(frontLeftPower);
+        backLeftMotor.setPower(backLeftPower);
+        frontRightMotor.setPower(frontRightPower);
+        backRightMotor.setPower(backRightPower);
+    }
+
+}
