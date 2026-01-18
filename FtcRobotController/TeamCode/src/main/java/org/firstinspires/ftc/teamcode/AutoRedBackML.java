@@ -130,9 +130,9 @@ public class AutoRedBackML extends LinearOpMode {
         autoAimAndShoot();
 
         // 2. Intake middle spike
-        telemetry.addData("Step 2", "Intake Middle Spike");
+        telemetry.addData("Step 2", "Intake Lower Spike");
         telemetry.update();
-        intakeSpikeBalls(RED_MIDDLE_SPIKE_X, RED_MIDDLE_SPIKE_Y, 0);
+        intakeSpikeBalls(RED_LOWER_SPIKE_X, RED_LOWER_SPIKE_Y, 0);
 
         // 3. Shoot balls with auto-aim
         telemetry.addData("Step 3", "Navigate and Shoot Balls");
@@ -158,6 +158,16 @@ public class AutoRedBackML extends LinearOpMode {
         // }
 
         // 5. Intake top spike (lowest Y for red)
+        telemetry.addData("Step 5", "Intake Middle Spike");
+        telemetry.update();
+        intakeSpikeBalls(RED_MIDDLE_SPIKE_X, RED_MIDDLE_SPIKE_Y, 0);
+
+        // 6. Final shoot
+        telemetry.addData("Step 6", "Final Shoot");
+        telemetry.update();
+        driveToPosition(RED_SHOOT_X, RED_SHOOT_Y, 0);
+        autoAimAndShoot();
+
         telemetry.addData("Step 5", "Intake Top Spike");
         telemetry.update();
         intakeSpikeBalls(RED_TOP_SPIKE_X, RED_TOP_SPIKE_Y, 0);
@@ -167,7 +177,6 @@ public class AutoRedBackML extends LinearOpMode {
         telemetry.update();
         driveToPosition(RED_SHOOT_X, RED_SHOOT_Y, 0);
         autoAimAndShoot();
-
         // Stop all motors
         stopAllMotors();
 
