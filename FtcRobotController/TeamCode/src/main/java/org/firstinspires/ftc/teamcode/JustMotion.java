@@ -44,10 +44,15 @@ public class JustMotion extends LinearOpMode {
     private int lastFREncoder = 0;
     private int lastBREncoder = 0;
     private double currentPos;
+
+    private int toggle = 1;
+    private int toggles = 1;
     
     // Speed preset state
     private enum SpeedMode { SLOW, MEDIUM, FAST }
     private SpeedMode currentSpeedMode = SpeedMode.FAST;
+
+    private double speedMultiplier = 1.0;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -209,12 +214,12 @@ public class JustMotion extends LinearOpMode {
                 robotHeading = 0.0;
 
                 //TEST CODES Just for testing in one class
-                currentPos = spatulaServo.getPosition();
-                spatulaServo.setPosition(0.5);
-                sleep(1000);
-                spatulaServo.setPosition(0);
-                sleep(1000);
-                spatulaServo.setPosition(1);
+            //    currentPos = spatulaServo.getPosition();
+            //    spatulaServo.setPosition(0.5);
+            //    sleep(1000);
+            //    spatulaServo.setPosition(0);
+            //    sleep(1000);
+            //    spatulaServo.setPosition(1);
             //    currentPos = spinSpinServo.getPosition();
             //    spinSpinServo.setPosition(0.5);
             //    sleep(1000);
@@ -223,22 +228,53 @@ public class JustMotion extends LinearOpMode {
             //    spinSpinServo.setPosition(1);
             //    launchMotor.setPower(1);
             //    intakeMotor.setPower(1);
+                if (toggles == 1) {
+                    spatulaServo.setPosition(0);
+                    toggles = 0;
+                }
+                else {
+                    spatulaServo.setPosition(1);
+                    toggles = 1;
+                }
 
             }
             
             // ========== RIGHT BUMPER - SNAP TO 0° ==========
             if (rightBumperPressed) {
                 // Calculate rotation needed to face forward
-                double targetHeading = 0.0;
-                double currentHeading = robotHeading;
-                double headingError = targetHeading - currentHeading;
+            //    double targetHeading = 0.0;
+            //    double currentHeading = robotHeading;
+            //    double headingError = targetHeading - currentHeading;
                 
                 // Normalize to [-PI, PI]
-                while (headingError > Math.PI) headingError -= 2 * Math.PI;
-                while (headingError < -Math.PI) headingError += 2 * Math.PI;
+            //    while (headingError > Math.PI) headingError -= 2 * Math.PI;
+            //    while (headingError < -Math.PI) headingError += 2 * Math.PI;
                 
                 // Quick snap rotation (will execute over next few loops)
                 // This just sets up for the next control cycle
+
+                switch (currentSpeedMode) {
+                    case SLOW:
+                        speedMultiplier = SPEED_SLOW;
+                        break;
+                    case MEDIUM:
+                        speedMultiplier = SPEED_MEDIUM;
+                        break;
+                    case FAST:
+                        speedMultiplier = SPEED_FAST;
+                        break;
+                }
+
+
+                if (toggle == 1) {
+                    launchMotor.setPower(1 * speedMultiplier);
+                    toggle = 0;
+                }
+                else {
+                    launchMotor.setPower(0);
+                    toggle = 1;
+                }
+
             }
             
             // ========== DRIVE CONTROL ==========
@@ -323,7 +359,7 @@ public class JustMotion extends LinearOpMode {
             rx = applyDeadzone(rx);
             
             // Apply speed preset
-            double speedMultiplier = 1.0;
+
             switch (currentSpeedMode) {
                 case SLOW:
                     speedMultiplier = SPEED_SLOW;
