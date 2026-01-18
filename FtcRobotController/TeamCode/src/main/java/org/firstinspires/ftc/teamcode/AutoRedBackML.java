@@ -141,21 +141,21 @@ public class AutoRedBackML extends LinearOpMode {
         autoAimAndShoot();
 
         // 4. Intake gate, shoot balls, repeat
-        for (int i = 0; i < 4; i++) {
-            telemetry.addData("Loop Iteration", i + 1);
-            telemetry.update();
+        // for (int i = 0; i < 4; i++) {
+        //     telemetry.addData("Loop Iteration", i + 1);
+        //     telemetry.update();
             
-            // Intake gate
-            telemetry.addData("Loop Step 1", "Intake Gate");
-            telemetry.update();
-            intakeGateBalls();
+        //     // Intake gate
+        //     telemetry.addData("Loop Step 1", "Intake Gate");
+        //     telemetry.update();
+        //     intakeGateBalls();
 
-            // Shoot balls
-            telemetry.addData("Loop Step 2", "Navigate and Shoot Balls");
-            telemetry.update();
-            driveToPosition(RED_SHOOT_X, RED_SHOOT_Y, 0);
-            autoAimAndShoot();
-        }
+        //     // Shoot balls
+        //     telemetry.addData("Loop Step 2", "Navigate and Shoot Balls");
+        //     telemetry.update();
+        //     driveToPosition(RED_SHOOT_X, RED_SHOOT_Y, 0);
+        //     autoAimAndShoot();
+        // }
 
         // 5. Intake top spike (lowest Y for red)
         telemetry.addData("Step 5", "Intake Top Spike");
