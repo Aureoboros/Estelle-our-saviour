@@ -696,7 +696,7 @@ public class TeleOpTourney extends LinearOpMode {
 
             // Actuate spatula to push ball
             spatulaServo.setPosition(0.0);
-            sleep(300);
+            sleep(600);
             spatulaServo.setPosition(1.0);
             sleep(200);
 
