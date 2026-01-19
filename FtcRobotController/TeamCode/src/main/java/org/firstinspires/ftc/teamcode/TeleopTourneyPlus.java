@@ -14,12 +14,12 @@ import com.qualcomm.hardware.limelightvision.LLResultTypes;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 // Buttons as per https://docs.google.com/document/d/1_6g9IvvFj1Ofdy_aqY4_loDmhZa_UZqgFy8Ihcow7NI/edit?tab=t.0
-@TeleOp(name = "TeleOpTourney")
-public class TeleOpTourney extends LinearOpMode {
+@TeleOp(name = "TeleOpTourneyPlus")
+public class TeleOpTourneyPlus extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = -1.0;
-    private static final double LAUNCH_MOTOR_POWER = 0.7;
+    private static final double LAUNCH_MOTOR_POWER = -0.5;
     private static final double SPATULA_SERVO_POWER = 0.8;
 
     // Navigation constants
@@ -38,7 +38,8 @@ public class TeleOpTourney extends LinearOpMode {
     private static final double MAX_MOTOR_RPM = 6000.0;
     private static final double FIELD_SIZE_MM = 3657.6; // 12 feet in mm
     private static final double WHEEL_DIAMETER_MM = 100.0; // CALIBRATE THIS
-    private static final int TARGET_APRILTAG_ID = 24;  // Red alliance goal
+    private static final int TARGET_APRILTAG_ID = 24;  //
+    // Red alliance goal
 
     // DECODE Season AprilTag positions (in mm from field center)
     private static final double[][] TAG_POSITIONS = {
@@ -144,7 +145,7 @@ public class TeleOpTourney extends LinearOpMode {
         Gamepad previousGamepad2 = new Gamepad();
 
         // Toggle states
-        boolean slowMode = true;
+        boolean slowMode = false;
         boolean fieldCentric = false;
 
         waitForStart();
@@ -221,6 +222,9 @@ public class TeleOpTourney extends LinearOpMode {
                 }
             }
             if (xPressed) {
+                stopServo.setPosition(1);
+                sleep(200);
+                stopServo.setPosition(0);
                 launchBalls(3);
             }
 
@@ -502,9 +506,9 @@ public class TeleOpTourney extends LinearOpMode {
         yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // Initialize servo positions
-        stopServo.setPosition(0.0); // Closed
+        stopServo.setPosition(1.0); // Closed
         spatulaServo.setPosition(1.0); // Down
-        spinSpinServo.setPosition(0.2); // Stop the spinservo to turn too far
+        spinSpinServo.setPosition(0.35); // Stop the spinservo to turn too far
 
 
         // ========== INIT TELEMETRY ==========
@@ -697,7 +701,7 @@ public class TeleOpTourney extends LinearOpMode {
             // Actuate spatula to push ball
             spatulaServo.setPosition(0.0);
             sleep(600);
-            spatulaServo.setPosition(1.0);
+            spatulaServo.setPosition(2.0);
             sleep(200);
 
             // Close stopper
