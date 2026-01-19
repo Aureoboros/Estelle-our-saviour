@@ -214,6 +214,13 @@ public class AutoBlueBackML extends LinearOpMode {
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(0);
         limelight.start();
+        
+        // Verify Limelight connection
+        telemetry.addLine("--- Limelight Status ---");
+        telemetry.addData("Limelight Connected", limelight.isConnected());
+        telemetry.addData("Limelight Running", limelight.isRunning());
+        telemetry.update();
+        sleep(500); // Give Limelight time to initialize
 
         // Set motor directions
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
@@ -237,14 +244,44 @@ public class AutoBlueBackML extends LinearOpMode {
         for (int i = 0; i < 30 && !positionDetected; i++) {
             LLResult result = limelight.getLatestResult();
             
-            if (result != null && result.isValid() && result.getFiducialResults().size() > 0) {
+            // Debug: Show raw Limelight data
+            telemetry.addLine("--- Limelight Raw Data ---");
+            telemetry.addData("Attempt", "%d/30", i + 1);
+            telemetry.addData("Limelight Connected", limelight.isConnected());
+            telemetry.addData("Limelight Running", limelight.isRunning());
+            
+            if (result == null) {
+                telemetry.addData("Result", "NULL - No data from Limelight");
+                telemetry.update();
+                sleep(100);
+                continue;
+            }
+            
+            telemetry.addData("Result Valid", result.isValid());
+            telemetry.addData("Pipeline Index", result.getPipelineIndex());
+            telemetry.addData("Timestamp", "%.3f", result.getTimestamp());
+            telemetry.addData("Targeting Latency", "%.1f ms", result.getTargetingLatency());
+            
+            // Show fiducial (AprilTag) results
+            int fiducialCount = result.getFiducialResults().size();
+            telemetry.addData("AprilTags Detected", fiducialCount);
+            
+            if (result.isValid() && fiducialCount > 0) {
                 for (LLResultTypes.FiducialResult fiducial : result.getFiducialResults()) {
                     int tagId = fiducial.getFiducialId();
+                    
+                    telemetry.addLine();
+                    telemetry.addData("Tag ID", tagId);
+                    telemetry.addData("TX (horizontal offset)", "%.2f°", fiducial.getTargetXDegrees());
+                    telemetry.addData("TY (vertical offset)", "%.2f°", fiducial.getTargetYDegrees());
+                    telemetry.addData("Target Area", "%.4f", fiducial.getTargetArea());
                     
                     // Use any visible tag to establish position
                     if (tagId >= 20 && tagId <= 24) {
                         double distance = calculateDistanceFromLimelight(fiducial);
                         double angle = Math.toRadians(fiducial.getTargetXDegrees());
+                        
+                        telemetry.addData("Calculated Distance", "%.1f mm", distance);
                         
                         // Calculate robot position relative to tag
                         double[] tagPos = TAG_POSITIONS[tagId - 20];
@@ -252,14 +289,29 @@ public class AutoBlueBackML extends LinearOpMode {
                         robotY = (tagPos[1] - distance * Math.cos(angle)) / 304.8;
                         
                         positionDetected = true;
-                        telemetry.addData("Position detected via Tag", tagId);
+                        telemetry.addLine();
+                        telemetry.addData("✓ Position Detected via Tag", tagId);
                         telemetry.addData("Robot Position", "X: %.2f ft, Y: %.2f ft", robotX, robotY);
                         telemetry.update();
+                        sleep(1000); // Show result for 1 second
                         break;
                     }
                 }
+            } else {
+                telemetry.addLine();
+                telemetry.addData("Status", "No valid AprilTags in view");
             }
+            
+            telemetry.update();
             sleep(100);
+        }
+        
+        if (!positionDetected) {
+            telemetry.addLine("--- Position Detection Failed ---");
+            telemetry.addData("Limelight Connected", limelight.isConnected());
+            telemetry.addData("Limelight Running", limelight.isRunning());
+            telemetry.addLine("Check: Camera view, AprilTag visibility, Pipeline settings");
+            telemetry.update();
         }
     }
 
