@@ -459,9 +459,10 @@ public class AutoBlueBackML extends LinearOpMode {
     }
 
     private void resetOdometry() {
-        lastLeftEncoderPos = frontLeftMotor.getCurrentPosition();
-        lastRightEncoderPos = frontRightMotor.getCurrentPosition();
-        lastStrafeEncoderPos = backLeftMotor.getCurrentPosition();
+        xodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        yodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        xodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         odometryInitialized = true;
     }
 

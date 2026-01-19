@@ -158,7 +158,10 @@ public class TeleOpTourney extends LinearOpMode {
             currentGamepad2.copy(gamepad2);
 
             // ========== UPDATE ODOMETRY ==========
-            updateDriveEncoderOdometry(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor, imu);
+            // updateDriveEncoderOdometry(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor, imu);
+            robotX = getXOdoInches() / 12;
+            robotY = getYOdoInches() / 12;
+            // ARATRIKA COME BACK TO THIS >:( also written by aratrika yeah
 
             // ========== RISING EDGE DETECTION ==========
             boolean startPressed = (currentGamepad1.start && !previousGamepad1.start) ||
@@ -204,7 +207,8 @@ public class TeleOpTourney extends LinearOpMode {
 
             // ========== A/B/X BUTTONS - SPEED PRESETS ==========
             if (aPressed) {
-                driveToPosition(0,0,0);
+                // driveToPosition(0,0,0);
+                driveToPositionOdoWheels(0, 0);
             }
             if (bPressed) {
                 if (togglestopper == 1) {
@@ -222,29 +226,30 @@ public class TeleOpTourney extends LinearOpMode {
 
             // ========== BACK BUTTON - RESET ODOMETRY ==========
             if (backPressed) {
-                imu.resetYaw();
-                frontLeftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                backLeftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                frontRightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                backRightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                frontLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                backLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                frontRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                backRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                robotX = 0.0;
-                robotY = 0.0;
-                robotHeading = 0.0;
-                lastFLEncoder = 0;
-                lastBLEncoder = 0;
-                lastFREncoder = 0;
-                lastBREncoder = 0;
+//                imu.resetYaw();
+//                frontLeftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//                backLeftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//                frontRightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//                backRightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//                frontLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+//                backLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+//                frontRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+//                backRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+//                robotX = 0.0;
+//                robotY = 0.0;
+//                robotHeading = 0.0;
+//                lastFLEncoder = 0;
+//                lastBLEncoder = 0;
+//                lastFREncoder = 0;
+//                lastBREncoder = 0;
+//                COME BACK TO THIS TOO ARATRIKA...PLEASE...
+                resetOdometryPods();
             }
 
             // ========== LEFT BUMPER - RESET IMU HEADING ==========
             if (leftBumperPressed) {
                 imu.resetYaw();
                 robotHeading = 0.0;
-
             }
 
             // ========== RIGHT BUMPER - SNAP TO 0° ==========
@@ -744,12 +749,15 @@ public class TeleOpTourney extends LinearOpMode {
 
         // Initialize odometry if not already done
         if (!odometryInitialized) {
-            resetOdometry();
+            // resetOdometry();
+            resetOdometryPods();
         }
 
         while (opModeIsActive() && (getRuntime() - startTime) < timeout) {
             // Update robot position from odometry
-            updateOdometryPosition();
+            // updateOdometryPosition();
+            robotX = getXOdoInches() / 12;
+            robotY = getYOdoInches() / 12;
 
             double deltaX = targetX - robotX;
             double deltaY = targetY - robotY;
@@ -803,13 +811,15 @@ public class TeleOpTourney extends LinearOpMode {
 
     private void resetOdometry() {
         // Reset encoder positions - use drive motors if no dedicated odometry pods
-        lastLeftEncoderPos = frontLeftMotor.getCurrentPosition();
-        lastRightEncoderPos = frontRightMotor.getCurrentPosition();
-        lastStrafeEncoderPos = backLeftMotor.getCurrentPosition();
+//        lastLeftEncoderPos = frontLeftMotor.getCurrentPosition();
+//        lastRightEncoderPos = frontRightMotor.getCurrentPosition();
+//        lastStrafeEncoderPos = backLeftMotor.getCurrentPosition();
+        // ARATRIKAAAA
         odometryInitialized = true;
     }
 
     private void updateOdometryPosition() {
+        // ARATRIKA YA GOT A LOTTA WORK TO DO </3
         // Get current encoder positions (using drive motors as odometry if no dedicated pods)
         int leftPos = frontLeftMotor.getCurrentPosition();
         int rightPos = frontRightMotor.getCurrentPosition();
