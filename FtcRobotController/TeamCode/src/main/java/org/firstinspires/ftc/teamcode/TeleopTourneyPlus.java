@@ -15,7 +15,7 @@ import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 // Buttons as per https://docs.google.com/document/d/1_6g9IvvFj1Ofdy_aqY4_loDmhZa_UZqgFy8Ihcow7NI/edit?tab=t.0
 @TeleOp(name = "TeleOpTourney")
-public class TeleOpTourney extends LinearOpMode {
+public class TeleOpTourneyPlus extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = -1.0;
@@ -419,9 +419,6 @@ public class TeleOpTourney extends LinearOpMode {
                     currentSpeedMode == TeleOpTourney.SpeedMode.SLOW ? "SLOW (30%)" :
                             currentSpeedMode == TeleOpTourney.SpeedMode.MEDIUM ? "MEDIUM (60%)" :
                                     "FAST (100%)";
-            telemetry.addData("Speed", speedModeStr);
-            telemetry.addData("Control Mode", fieldCentric ? "FIELD-CENTRIC" : "ROBOT-CENTRIC");
-            telemetry.addLine();
 
             telemetry.addLine("--- Position (Odometry) ---");
             telemetry.addData("X Position", "%.2f inches", robotX);
@@ -435,14 +432,6 @@ public class TeleOpTourney extends LinearOpMode {
             telemetry.addData("FR", "%.2f", frontRightPower);
             telemetry.addData("BR", "%.2f", backRightPower);
             telemetry.addLine();
-
-            telemetry.addLine("--- Controls ---");
-            telemetry.addLine("A/B/X = Speed Presets (Slow/Med/Fast)");
-            telemetry.addLine("START = Toggle Slow Mode");
-            telemetry.addLine("Y = Toggle Field-Centric");
-            telemetry.addLine("LB = Reset Heading | RB = Snap to 0°");
-            telemetry.addLine("BACK = Reset Position");
-            telemetry.addLine("DPAD = Precision Movement");
 
             telemetry.addData("Spin = ", "%.2f", currentPos);
             telemetry.addLine();
