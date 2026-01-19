@@ -112,6 +112,13 @@ public class LimelightTurretTest extends LinearOpMode {
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(0);
         limelight.start();
+
+        // Verify Limelight connection
+        telemetry.addLine("--- Limelight Status ---");
+        telemetry.addData("Limelight Connected", limelight.isConnected());
+        telemetry.addData("Limelight Running", limelight.isRunning());
+        telemetry.update();
+        sleep(500); // Give Limelight time to initialize
     }
 
     private void updateTurretTracking() {
@@ -149,10 +156,56 @@ public class LimelightTurretTest extends LinearOpMode {
         telemetry.addData("Servo Pos", "%.3f", spinSpinServo.getPosition());
         telemetry.addData("Active Zone", "%.2f → %.2f", servoMin, servoMax);
 
+        telemetry.addLine();
+        telemetry.addLine("--- Limelight Status ---");
+        telemetry.addData("Limelight Connected", limelight.isConnected());
+        telemetry.addData("Limelight Running", limelight.isRunning());
+
         LLResult r = limelight.getLatestResult();
-        telemetry.addData("Limelight Valid", r != null && r.isValid());
-        if (r != null && r.isValid()) {
-            telemetry.addData("Tags Seen", r.getFiducialResults().size());
+
+        if (r == null) {
+            telemetry.addData("Result", "NULL - No data from Limelight");
+            telemetry.addLine("Check: USB connection, power, Control Hub config");
+        } else {
+            telemetry.addData("Result Valid", r.isValid());
+            telemetry.addData("Pipeline Index", r.getPipelineIndex());
+            telemetry.addData("Timestamp", "%.3f", r.getTimestamp());
+            telemetry.addData("Targeting Latency", "%.1f ms", r.getTargetingLatency());
+
+            int fiducialCount = r.getFiducialResults().size();
+            telemetry.addData("AprilTags Detected", fiducialCount);
+
+            if (r.isValid() && fiducialCount > 0) {
+                telemetry.addLine();
+                telemetry.addLine("--- AprilTag Data ---");
+                for (LLResultTypes.FiducialResult fiducial : r.getFiducialResults()) {
+                    int tagId = fiducial.getFiducialId();
+                    telemetry.addData("Tag ID", tagId);
+                    telemetry.addData("TX (horizontal)", "%.2f°", fiducial.getTargetXDegrees());
+                    telemetry.addData("TY (vertical)", "%.2f°", fiducial.getTargetYDegrees());
+                    telemetry.addData("Target Area", "%.4f", fiducial.getTargetArea());
+
+                    // Show if this is the tag we're tracking
+                    if (tagId == currentTargetTag) {
+                        telemetry.addData("Status", "✓ TRACKING");
+                    }
+                    telemetry.addLine();
+                }
+            } else if (r.isValid()) {
+                telemetry.addLine();
+                telemetry.addData("Status", "No AprilTags in view");
+                telemetry.addLine("Aim camera at AprilTag 20 or 24");
+            } else {
+                telemetry.addLine();
+                telemetry.addData("Status", "Result invalid");
+                telemetry.addLine("Check pipeline settings in Limelight");
+            }
         }
+
+        telemetry.addLine();
+        telemetry.addLine("--- Controls ---");
+        telemetry.addLine("B = Toggle Track Tag 24 (Red)");
+        telemetry.addLine("X = Toggle Track Tag 20 (Blue)");
+        telemetry.addLine("Y = Reset to Center");
     }
 }
