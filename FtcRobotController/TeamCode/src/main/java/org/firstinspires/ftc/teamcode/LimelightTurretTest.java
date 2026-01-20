@@ -15,11 +15,14 @@ public class LimelightTurretTest extends LinearOpMode {
     // Servo constants
     private static final double SERVO_START_POS = 0.35;
     private static final double SERVO_RANGE_90 = 0.5;
+    private static final double SERVO_FULL_ROTATION = 1.0; // Full servo range represents 360 degrees for continuous rotation
+    private static final double DEGREES_PER_SERVO_UNIT = 360.0; // Degrees per full servo range (calibrate this)
 
     // Tracking constants
     private static final double TX_TOLERANCE = 2.0;
     private static final double PROPORTIONAL_GAIN = 0.01;
     private static final double MAX_STEP = 0.02; // prevents snapping to 90°
+    private static final double MAX_ANGLE_THRESHOLD = 90.0; // If angle > 90°, go the other way
 
     // Pipelines / tags
     private static final int PIPELINE_TAG_24 = 0;
@@ -136,10 +139,35 @@ public class LimelightTurretTest extends LinearOpMode {
         double tx = target.getTargetXDegrees();
         if (Math.abs(tx) <= TX_TOLERANCE) return;
 
-        double adjustment = Range.clip(-tx * PROPORTIONAL_GAIN, -MAX_STEP, MAX_STEP);
-        double newPos = spinSpinServo.getPosition() + adjustment;
+        // Calculate the shortest path to the target
+        // If the angle is more than 90 degrees, move the other way (360 - angle)
+        double adjustmentAngle = tx;
+        
+        if (Math.abs(tx) > MAX_ANGLE_THRESHOLD) {
+            // The tag is more than 90° away in current direction
+            // Go the other way: if tx is +120°, go -240° instead (or vice versa)
+            if (tx > 0) {
+                adjustmentAngle = tx - 360.0; // e.g., 120° becomes -240°
+            } else {
+                adjustmentAngle = tx + 360.0; // e.g., -120° becomes +240°
+            }
+        }
+        
+        // Convert angle to servo adjustment
+        // Negative because we want to move toward the target (opposite of offset)
+        double adjustment = Range.clip(-adjustmentAngle * PROPORTIONAL_GAIN, -MAX_STEP, MAX_STEP);
+        double currentPos = spinSpinServo.getPosition();
+        double newPos = currentPos + adjustment;
+        
+        // Handle wraparound for continuous rotation servo
+        // If we go past the limits, wrap around
+        if (newPos > 1.0) {
+            newPos = newPos - 1.0;
+        } else if (newPos < 0.0) {
+            newPos = 1.0 + newPos;
+        }
 
-        spinSpinServo.setPosition(Range.clip(newPos, servoMin, servoMax));
+        spinSpinServo.setPosition(Range.clip(newPos, 0.0, 1.0));
     }
 
     private void displayTelemetry() {
