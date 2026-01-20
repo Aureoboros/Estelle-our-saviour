@@ -121,7 +121,7 @@ public class AutoBlueBackML extends LinearOpMode {
         telemetry.addData("Step 1", "Navigate and Shoot Balls");
         telemetry.update();
         // driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
-        driveToPositionOdoWheels(BLUE_SHOOT_X, BLUE_SHOOT_Y * 12);
+        driveToPositionOdoWheels(BLUE_SHOOT_X * 12, BLUE_SHOOT_Y * 12);
         autoAimAndShoot();
 
         // 4. Intake gate, shoot balls, repeat
