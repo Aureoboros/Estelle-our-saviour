@@ -725,8 +725,8 @@ public class AutoBlueBackML extends LinearOpMode {
         absoluteFieldX = startXInches;
         absoluteFieldY = startYInches;
         
-        // Store current encoder positions as reference
-        lastXOdoPosition = xodo.getCurrentPosition();
+        // Store current encoder positions as reference (use -ve for xodo, consistent with getXOdoInches)
+        lastXOdoPosition = -xodo.getCurrentPosition();
         lastYOdoPosition = yodo.getCurrentPosition();
         
         absoluteOdometryInitialized = true;
@@ -740,8 +740,8 @@ public class AutoBlueBackML extends LinearOpMode {
      * Call this continuously during autonomous to track position.
      */
     private void updateAbsoluteOdometry() {
-        // Get current encoder positions
-        int currentXOdo = xodo.getCurrentPosition();
+        // Get current encoder positions (use -ve for xodo, consistent with getXOdoInches)
+        int currentXOdo = -xodo.getCurrentPosition();
         int currentYOdo = yodo.getCurrentPosition();
         
         // Calculate deltas since last update
@@ -749,7 +749,7 @@ public class AutoBlueBackML extends LinearOpMode {
         int deltaYTicks = currentYOdo - lastYOdoPosition;
         
         // Convert ticks to inches
-        double deltaXInches = -deltaXTicks * ODOMETRY_INCHES_PER_TICK; // Negative for X direction
+        double deltaXInches = deltaXTicks * ODOMETRY_INCHES_PER_TICK;
         double deltaYInches = deltaYTicks * ODOMETRY_INCHES_PER_TICK;
         
         // Get current heading for field-centric conversion
