@@ -79,6 +79,13 @@ public class AutoBlueBackML extends LinearOpMode {
     private int lastStrafeEncoderPos = 0;
     private boolean positionDetected = false;
 
+    // Absolute odometry tracking (for driveToPositionOdoWheels)
+    private double absoluteFieldX = 0.0;  // Current X position in inches (absolute field coordinates)
+    private double absoluteFieldY = 0.0;  // Current Y position in inches (absolute field coordinates)
+    private int lastXOdoPosition = 0;     // Last xOdo encoder reading
+    private int lastYOdoPosition = 0;     // Last yOdo encoder reading
+    private boolean absoluteOdometryInitialized = false;
+
     // Hardware
     private DcMotor frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor;
     private DcMotor intakeMotor, launchMotor;
@@ -616,14 +623,14 @@ public class AutoBlueBackML extends LinearOpMode {
     }
 
     private void intakeSpikeBalls(double spike_x, double spike_y, double angle) {
-        // driveToPosition(spike_x, spike_y, 0);
+        // spike_x and spike_y are already in INCHES (converted at call site)
+        // angle is in DEGREES
         driveToPositionOdoWheels(spike_x, spike_y, 0);
-        turnToAngle(-Math.toRadians(angle));
+        turnToAngle(Math.toRadians(-angle)); // turnToAngle expects radians
         intakeMotor.setPower(INTAKE_POWER);
-        // driveToPosition(spike_x - 2.0, spike_y, -Math.toRadians(angle));
-        driveToPositionOdoWheels(spike_x - 2.0 * 12, spike_y, -Math.toRadians(angle));
+        // Move 24 inches (2 feet) in the -X direction for intake
+        driveToPositionOdoWheels(spike_x - 24.0, spike_y, -angle); // driveToPositionOdoWheels expects degrees
         intakeMotor.setPower(0);
-        // driveToPosition(spike_x, spike_y, 0);
         driveToPositionOdoWheels(spike_x, spike_y, 0);
     }
 
@@ -701,17 +708,96 @@ public class AutoBlueBackML extends LinearOpMode {
     // ========== ODOMETRY WHEEL NAVIGATION API ==========
 
     /**
-     * Drives the robot to a specific position on the FTC 2026 field using xOdo and yOdo wheels.
+     * Initializes the absolute odometry system with the robot's starting position.
+     * Call this once at the start of autonomous with the robot's known field position.
+     * 
+     * @param startXInches Starting X position in inches from field center
+     * @param startYInches Starting Y position in inches from field center
+     */
+    public void initializeAbsoluteOdometry(double startXInches, double startYInches) {
+        // Reset the odometry encoders
+        xodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        yodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        xodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        
+        // Set the absolute position to the known starting position
+        absoluteFieldX = startXInches;
+        absoluteFieldY = startYInches;
+        
+        // Store current encoder positions as reference
+        lastXOdoPosition = xodo.getCurrentPosition();
+        lastYOdoPosition = yodo.getCurrentPosition();
+        
+        absoluteOdometryInitialized = true;
+        
+        telemetry.addData("Odometry Initialized", "X: %.1f in, Y: %.1f in", absoluteFieldX, absoluteFieldY);
+        telemetry.update();
+    }
+
+    /**
+     * Updates the robot's absolute field position based on odometry wheel movements.
+     * Call this continuously during autonomous to track position.
+     */
+    private void updateAbsoluteOdometry() {
+        // Get current encoder positions
+        int currentXOdo = xodo.getCurrentPosition();
+        int currentYOdo = yodo.getCurrentPosition();
+        
+        // Calculate deltas since last update
+        int deltaXTicks = currentXOdo - lastXOdoPosition;
+        int deltaYTicks = currentYOdo - lastYOdoPosition;
+        
+        // Convert ticks to inches
+        double deltaXInches = -deltaXTicks * ODOMETRY_INCHES_PER_TICK; // Negative for X direction
+        double deltaYInches = deltaYTicks * ODOMETRY_INCHES_PER_TICK;
+        
+        // Get current heading for field-centric conversion
+        double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+        
+        // Convert robot-relative movement to field-relative movement
+        double fieldDeltaX = deltaXInches * Math.cos(heading) - deltaYInches * Math.sin(heading);
+        double fieldDeltaY = deltaXInches * Math.sin(heading) + deltaYInches * Math.cos(heading);
+        
+        // Update absolute position
+        absoluteFieldX += fieldDeltaX;
+        absoluteFieldY += fieldDeltaY;
+        
+        // Store current encoder positions for next update
+        lastXOdoPosition = currentXOdo;
+        lastYOdoPosition = currentYOdo;
+    }
+
+    /**
+     * Gets the current absolute X position on the field.
+     * @return X position in inches from field center
+     */
+    public double getAbsoluteFieldX() {
+        return absoluteFieldX;
+    }
+
+    /**
+     * Gets the current absolute Y position on the field.
+     * @return Y position in inches from field center
+     */
+    public double getAbsoluteFieldY() {
+        return absoluteFieldY;
+    }
+
+    /**
+     * Drives the robot to a specific ABSOLUTE position on the FTC 2026 field using xOdo and yOdo wheels.
      * Uses a PID-like control loop for smooth and accurate positioning.
+     * 
+     * IMPORTANT: Call initializeAbsoluteOdometry() once at the start of autonomous before using this method.
      *
      * FTC 2026 Field Coordinates:
      * - Origin (0, 0) is at field center
      * - X-axis: positive toward red alliance wall, negative toward blue
      * - Y-axis: positive toward audience, negative toward scoring tables
-     * - Field size: 12ft x 12ft (-6ft to +6ft on each axis)
+     * - Field size: 12ft x 12ft (-72in to +72in on each axis)
      *
-     * @param targetXInches Target X position in inches from field center
-     * @param targetYInches Target Y position in inches from field center
+     * @param targetXInches Target X position in inches from field center (ABSOLUTE)
+     * @param targetYInches Target Y position in inches from field center (ABSOLUTE)
      * @param targetHeadingDeg Target heading in degrees (0 = forward, positive = CCW)
      * @param maxSpeed Maximum drive speed (0.0 to 1.0)
      * @param timeoutSeconds Maximum time to reach target before giving up
@@ -738,27 +824,26 @@ public class AutoBlueBackML extends LinearOpMode {
         targetXInches = Range.clip(targetXInches, FIELD_MIN_INCHES, FIELD_MAX_INCHES);
         targetYInches = Range.clip(targetYInches, FIELD_MIN_INCHES, FIELD_MAX_INCHES);
 
-        // Convert target heading to radians
-        double targetHeadingRad = Math.toRadians(targetHeadingDeg);
-
-        // Reset odometry pods to establish current position as origin
-        resetOdometryPods();
-
-        // Calculate initial position offsets from odometry
-        double startXOdo = getXOdoInches();
-        double startYOdo = getYOdoInches();
+        // Initialize absolute odometry if not already done (use current position as starting point)
+        if (!absoluteOdometryInitialized) {
+            // Default to BLUE_START if not initialized
+            initializeAbsoluteOdometry(BLUE_DEFAULT_START_X * 12.0, BLUE_DEFAULT_START_Y * 12.0);
+        }
 
         double startTime = getRuntime();
         boolean targetReached = false;
 
         while (opModeIsActive() && (getRuntime() - startTime) < timeoutSeconds && !targetReached) {
-            // Read current position from odometry wheels
-            double currentXInches = getXOdoInches() - startXOdo;
-            double currentYInches = getYOdoInches() - startYOdo;
+            // Update absolute position from odometry
+            updateAbsoluteOdometry();
+            
+            // Get current absolute position
+            double currentXInches = absoluteFieldX;
+            double currentYInches = absoluteFieldY;
             double currentHeadingRad = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
             double currentHeadingDeg = Math.toDegrees(currentHeadingRad);
 
-            // Calculate position errors
+            // Calculate position errors (ABSOLUTE: target - current)
             double errorX = targetXInches - currentXInches;
             double errorY = targetYInches - currentYInches;
             double distance = Math.sqrt(errorX * errorX + errorY * errorY);
@@ -832,12 +917,13 @@ public class AutoBlueBackML extends LinearOpMode {
             backRightMotor.setPower(backRightPower);
 
             // Update telemetry
-            telemetry.addLine("--- Odo Wheel Navigation ---");
-            telemetry.addData("Target", "X: %.1f, Y: %.1f, H: %.1f°",
+            telemetry.addLine("--- Absolute Odo Navigation ---");
+            telemetry.addData("Target (absolute)", "X: %.1f, Y: %.1f, H: %.1f°",
                     targetXInches, targetYInches, targetHeadingDeg);
-            telemetry.addData("Current", "X: %.1f, Y: %.1f, H: %.1f°",
+            telemetry.addData("Current (absolute)", "X: %.1f, Y: %.1f, H: %.1f°",
                     currentXInches, currentYInches, currentHeadingDeg);
-            telemetry.addData("Distance", "%.2f in", distance);
+            telemetry.addData("Error", "X: %.1f, Y: %.1f", errorX, errorY);
+            telemetry.addData("Distance to target", "%.2f in", distance);
             telemetry.addData("Heading Error", "%.1f°", headingError);
             telemetry.addData("xOdo Raw", "%d ticks", getXOdoPosition());
             telemetry.addData("yOdo Raw", "%d ticks", getYOdoPosition());
@@ -851,13 +937,25 @@ public class AutoBlueBackML extends LinearOpMode {
     }
 
     /**
-     * Simplified version: drives to position with default speed and timeout.
-     * @param targetXInches Target X position in inches from field center
-     * @param targetYInches Target Y position in inches from field center
+     * Simplified version: drives to ABSOLUTE position with default speed and dynamic timeout.
+     * Timeout is calculated based on distance to allow sufficient travel time.
+     * @param targetXInches Target X position in inches from field center (ABSOLUTE)
+     * @param targetYInches Target Y position in inches from field center (ABSOLUTE)
      * @return true if position reached, false if timed out
      */
     public boolean driveToPositionOdoWheels(double targetXInches, double targetYInches) {
-        return driveToPositionOdoWheels(targetXInches, targetYInches, 0.0, 0.5, 5.0);
+        // Calculate distance from current position to target for timeout calculation
+        if (!absoluteOdometryInitialized) {
+            initializeAbsoluteOdometry(BLUE_DEFAULT_START_X * 12.0, BLUE_DEFAULT_START_Y * 12.0);
+        }
+        
+        double deltaX = targetXInches - absoluteFieldX;
+        double deltaY = targetYInches - absoluteFieldY;
+        double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        // Estimate ~15 inches per second at 0.5 speed, add 3 seconds buffer
+        double timeout = Math.max(5.0, (distance / 15.0) + 3.0);
+        return driveToPositionOdoWheels(targetXInches, targetYInches, 0.0, 0.5, timeout);
     }
 
     /**
