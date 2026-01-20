@@ -72,7 +72,7 @@ public class TeleOpTourney extends LinearOpMode {
     private static final double FIELD_MAX_FEET = 6.0;
 
     // Odometry constants
-    private static final double ODOMETRY_INCHES_PER_TICK = 0.001; // CALIBRATE THIS
+    private static final double ODOMETRY_INCHES_PER_TICK = 0.01; // CALIBRATE THIS
     private static final double COUNTS_PER_MM = 1.0; // CALIBRATE THIS
 
     // Tracking
@@ -944,7 +944,7 @@ public class TeleOpTourney extends LinearOpMode {
      * @return X odometry position in inches
      */
     public double getXOdoInches() {
-        return xodo.getCurrentPosition() * ODOMETRY_INCHES_PER_TICK;
+        return -xodo.getCurrentPosition() * ODOMETRY_INCHES_PER_TICK;
     }
 
     /**
