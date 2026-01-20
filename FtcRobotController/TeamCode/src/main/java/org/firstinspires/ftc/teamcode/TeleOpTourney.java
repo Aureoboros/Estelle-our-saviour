@@ -504,7 +504,7 @@ public class TeleOpTourney extends LinearOpMode {
         // Initialize servo positions
         stopServo.setPosition(0.0); // Closed
         spatulaServo.setPosition(1.0); // Down
-        spinSpinServo.setPosition(0.2); // Stop the spinservo to turn too far
+        spinSpinServo.setPosition(0.35); // Stop the spinservo to turn too far
 
 
         // ========== INIT TELEMETRY ==========
@@ -686,20 +686,21 @@ public class TeleOpTourney extends LinearOpMode {
     }
 
     private void launchBalls(int count) {
-        launchMotor.setPower(LAUNCH_MOTOR_POWER);
+        launchMotor.setPower(-LAUNCH_MOTOR_POWER);
+        sleep(2000);
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
             stopServo.setPosition(1.0);
             sleep(100);
             // Close stopper to stop other balls from going under the spatula
-            stopServo.setPosition(0.0);
+            stopServo.setPosition(0.5);
+            while (stopServo.getPosition() != 0.5);
 
             // Actuate spatula to push ball
             spatulaServo.setPosition(0.0);
             sleep(600);
             spatulaServo.setPosition(1.0);
-            sleep(200);
-
+            while (spatulaServo.getPosition() != 1.0);
             // Close stopper
             //stopServo.setPosition(1.0);
             //sleep(200);

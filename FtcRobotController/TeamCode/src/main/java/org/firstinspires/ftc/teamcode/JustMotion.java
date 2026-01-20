@@ -267,7 +267,7 @@ public class JustMotion extends LinearOpMode {
 
 
                 if (toggle == 1) {
-                    launchMotor.setPower(1 * speedMultiplier);
+                    launchMotor.setPower(-1 * speedMultiplier);
                     toggle = 0;
                 }
                 else {
