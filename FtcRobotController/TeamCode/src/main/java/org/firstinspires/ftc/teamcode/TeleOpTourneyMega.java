@@ -523,7 +523,7 @@ public class TeleOpTourneyMega extends LinearOpMode {
         // Initialize servo positions
         stopServo.setPosition(0.0); // Closed
         spatulaServo.setPosition(1.0); // Down
-        spinSpinServo.setPosition(0.0); // Stop the spinservo to turn too far
+        spinSpinServo.setPosition(0.11); // Stop the spinservo to turn too far
         // ========== INIT TELEMETRY ==========
         telemetry.addLine("========================================");
         telemetry.addLine("TELEOP");
