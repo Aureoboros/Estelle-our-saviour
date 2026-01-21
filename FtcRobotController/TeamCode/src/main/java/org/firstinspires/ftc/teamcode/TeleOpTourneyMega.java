@@ -19,7 +19,7 @@ public class TeleOpTourneyMega extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = -1.0;
-    private static final double LAUNCH_MOTOR_POWER = -1.0;
+    private static final double LAUNCH_MOTOR_POWER = -0.8;
     private static final double SPATULA_SERVO_POWER = 0.8;
     private static final double SPIN_SERVO_SPEED = 0.5;
 
