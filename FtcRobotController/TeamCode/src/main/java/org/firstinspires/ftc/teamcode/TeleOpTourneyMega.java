@@ -1,3 +1,5 @@
+//DO NOT TOUCH THIS OR I WILL REARRANGE YOUR ORGANS FOR AN ART PIECE :) - Eshanvi
+// NO BUT SRSLY PLEASE DON'T!!!!
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
@@ -14,13 +16,14 @@ import com.qualcomm.hardware.limelightvision.LLResultTypes;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 // Buttons as per https://docs.google.com/document/d/1_6g9IvvFj1Ofdy_aqY4_loDmhZa_UZqgFy8Ihcow7NI/edit?tab=t.0
-@TeleOp(name = "TeleOpTourney")
-public class TeleOpTourney extends LinearOpMode {
+@TeleOp(name = "TeleOpTourneyMega")
+public class TeleOpTourneyMega extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = -1.0;
-    private static final double LAUNCH_MOTOR_POWER = 0.7;
+    private static final double LAUNCH_MOTOR_POWER = -1.0;
     private static final double SPATULA_SERVO_POWER = 0.8;
+    private static final double SPIN_SERVO_SPEED = 0.5;
 
     // Navigation constants
     private static final double AUTO_MAX_SPEED = 0.7;
@@ -37,8 +40,9 @@ public class TeleOpTourney extends LinearOpMode {
     private static final double GRAVITY_MM_S2 = 9810.0;
     private static final double MAX_MOTOR_RPM = 6000.0;
     private static final double FIELD_SIZE_MM = 3657.6; // 12 feet in mm
-    private static final double WHEEL_DIAMETER_MM = 100.0; // CALIBRATE THIS
-    private static final int TARGET_APRILTAG_ID = 24;  // Red alliance goal
+    private static final double WHEEL_DIAMETER_MM = 96.0; // CALIBRATE THIS
+    private static final int TARGET_APRILTAG_ID_RED = 24;  // Red alliance goal
+    private static final int TARGET_APRILTAG_ID_BLUE = 20; // Blue alliance goal
 
     // DECODE Season AprilTag positions (in mm from field center)
     private static final double[][] TAG_POSITIONS = {
@@ -84,6 +88,8 @@ public class TeleOpTourney extends LinearOpMode {
     private int lastRightEncoderPos = 0;
     private int lastStrafeEncoderPos = 0;
     private boolean positionDetected = false;
+
+    private boolean targetingRed = true; // Default to RED alliance
 
     // ========== MOTOR POWER CONSTANTS ==========
     private static final double SLOW_MODE_MULTIPLIER = 0.3;
@@ -180,20 +186,22 @@ public class TeleOpTourney extends LinearOpMode {
                     (currentGamepad2.left_bumper && !previousGamepad2.left_bumper);
             boolean rightBumperPressed = (currentGamepad1.right_bumper && !previousGamepad1.right_bumper) ||
                     (currentGamepad2.right_bumper && !previousGamepad2.right_bumper);
-
-            // ========== START BUTTON - SLOW MODE TOGGLE ==========
-            if (startPressed) {
-                if (togglespatula == 1) {
-                    spatulaServo.setPosition(0);
-                    togglespatula = 0;
-                }
-                else {
-                    spatulaServo.setPosition(1);
-                    togglespatula = 1;
-                }
+            // ========== L BUMPER - TURRET LEFT ==========
+            if (leftBumperPressed) {
+                double currentPos = spinSpinServo.getPosition();
+                double newPos = currentPos - (SPIN_SERVO_SPEED * 0.05);
+                newPos = Range.clip(newPos, 0.0, 1.0);
+                spinSpinServo.setPosition(newPos);
             }
 
-            // ========== Y BUTTON - FIELD CENTRIC TOGGLE ==========
+            // ========== R BUMPER - TURRET RIGHT ==========
+            if (rightBumperPressed) {
+                double currentPos = spinSpinServo.getPosition();
+                double newPos = currentPos + (SPIN_SERVO_SPEED * 0.05);
+                newPos = Range.clip(newPos, 0.0, 1.0);
+                spinSpinServo.setPosition(newPos);
+            }
+                // ========== Y BUTTON - FIELD CENTRIC TOGGLE ==========
             if (yPressed) {
                 if (toggleintake == 1) {
                     intakeMotor.setPower(INTAKE_POWER);
@@ -221,11 +229,12 @@ public class TeleOpTourney extends LinearOpMode {
                 }
             }
             if (xPressed) {
+
                 launchBalls(3);
             }
 
             // ========== BACK BUTTON - RESET ODOMETRY ==========
-            if (backPressed) {
+            if (startPressed) {
 //                imu.resetYaw();
 //                frontLeftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 //                backLeftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -246,14 +255,8 @@ public class TeleOpTourney extends LinearOpMode {
                 resetOdometryPods();
             }
 
-            // ========== LEFT BUMPER - RESET IMU HEADING ==========
-            if (leftBumperPressed) {
-                imu.resetYaw();
-                robotHeading = 0.0;
-            }
-
             // ========== RIGHT BUMPER - SNAP TO 0° ==========
-            if (rightBumperPressed) {
+            if (currentGamepad1.back && !previousGamepad1.back) {
                 // Calculate rotation needed to face forward
                 double targetHeading = 0.0;
                 double currentHeading = robotHeading;
@@ -265,6 +268,14 @@ public class TeleOpTourney extends LinearOpMode {
 
                 // Quick snap rotation (will execute over next few loops)
                 // This just sets up for the next control cycle
+            }
+
+            if (currentGamepad2.back && !previousGamepad2.back) {
+                targetingRed = !targetingRed; // Toggle between RED and BLUE
+                String alliance = targetingRed ? "🔴 RED (Tag 24)" : "🔵 BLUE (Tag 20)";
+                telemetry.addLine("Switched to " + alliance);
+                telemetry.update();
+                sleep(200);
             }
 
             // ========== DRIVE CONTROL ==========
@@ -502,10 +513,9 @@ public class TeleOpTourney extends LinearOpMode {
         yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // Initialize servo positions
-        stopServo.setPosition(0.0); // Closed
+        stopServo.setPosition(1.0); // Closed
         spatulaServo.setPosition(1.0); // Down
-        spinSpinServo.setPosition(0.35); // Stop the spinservo to turn too far
-
+        spinSpinServo.setPosition(1.65); // Stop the spinservo to turn too far
 
         // ========== INIT TELEMETRY ==========
         telemetry.addLine("========================================");
@@ -575,10 +585,10 @@ public class TeleOpTourney extends LinearOpMode {
 
             if (result != null && result.isValid() && result.getFiducialResults().size() > 0) {
                 for (LLResultTypes.FiducialResult fiducial : result.getFiducialResults()) {
-                    if (fiducial.getFiducialId() == TARGET_APRILTAG_ID) {
+                    if (fiducial.getFiducialId() == TARGET_APRILTAG_ID_RED) {
                         // Calculate distance using both methods
                         double limelightDistance = calculateDistanceFromLimelight(fiducial);
-                        double odoDistance = confirmPositionWithOdometry(TARGET_APRILTAG_ID);
+                        double odoDistance = confirmPositionWithOdometry(TARGET_APRILTAG_ID_RED);
                         double finalDistance = (limelightDistance + odoDistance) / 2.0;
 
                         // Calculate required launch velocity and RPM
@@ -597,7 +607,7 @@ public class TeleOpTourney extends LinearOpMode {
 
                         targetAcquired = true;
 
-                        telemetry.addData("Target Acquired", "Tag %d (RED)", TARGET_APRILTAG_ID);
+                        telemetry.addData("Target Acquired", "Tag %d (RED)", TARGET_APRILTAG_ID_RED);
                         telemetry.addData("Distance (mm)", "%.0f", finalDistance);
                         telemetry.addData("Required RPM", "%.0f", requiredRPM);
                         telemetry.update();
@@ -690,20 +700,20 @@ public class TeleOpTourney extends LinearOpMode {
         sleep(2000);
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
-            stopServo.setPosition(1.0);
+            stopServo.setPosition(0.0);
             sleep(100);
             // Close stopper to stop other balls from going under the spatula
             stopServo.setPosition(0.5);
-            while (stopServo.getPosition() != 0.5);
 
             // Actuate spatula to push ball
             spatulaServo.setPosition(0.0);
-            sleep(600);
+            sleep(1000);
             spatulaServo.setPosition(1.0);
             while (spatulaServo.getPosition() != 1.0);
-            // Close stopper
-            //stopServo.setPosition(1.0);
-            //sleep(200);
+
+            // Open stopper to allow ball through
+            stopServo.setPosition(1.0);
+            sleep(200);
         }
     }
 
