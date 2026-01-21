@@ -148,7 +148,7 @@ public class TeleOpTourneyMega extends LinearOpMode {
         Gamepad previousGamepad2 = new Gamepad();
 
         // Toggle states
-        boolean slowMode = true;
+        // boolean slowMode = true;
         boolean fieldCentric = false;
 
         waitForStart();
