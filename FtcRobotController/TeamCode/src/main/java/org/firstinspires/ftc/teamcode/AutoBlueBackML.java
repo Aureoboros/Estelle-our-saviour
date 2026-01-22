@@ -743,7 +743,6 @@ public class AutoBlueBackML extends LinearOpMode {
         // Store current encoder positions as reference (use -ve for xodo, consistent with getXOdoInches)
         lastXOdoPosition = -xodo.getCurrentPosition();
         lastYOdoPosition = yodo.getCurrentPosition();
-        
         absoluteOdometryInitialized = true;
         
         telemetry.addData("Odometry Initialized", "X: %.1f in, Y: %.1f in", absoluteFieldX, absoluteFieldY);
@@ -834,6 +833,9 @@ public class AutoBlueBackML extends LinearOpMode {
         final double KP_HEADING = 0.02;  // Proportional gain for heading
         final double MIN_POWER = 0.15;   // Minimum power to overcome friction
         final double SLOWDOWN_DIST = 12.0; // Start slowing down at 12 inches
+        
+        // Anti-oscillation: scale down rotation when far from target position
+        final double ROTATION_SCALE_DIST = 24.0; // Full rotation only within this distance
 
         // Clamp target to field bounds
         targetXInches = Range.clip(targetXInches, FIELD_MIN_INCHES, FIELD_MAX_INCHES);
@@ -868,32 +870,41 @@ public class AutoBlueBackML extends LinearOpMode {
             while (headingError > 180) headingError -= 360;
             while (headingError < -180) headingError += 360;
 
-            // Check if target reached
-            if (distance < POSITION_TOLERANCE && Math.abs(headingError) < HEADING_TOLERANCE) {
+            // Check if target reached (both position AND heading)
+            boolean positionReached = distance < POSITION_TOLERANCE;
+            boolean headingReached = Math.abs(headingError) < HEADING_TOLERANCE;
+            
+            if (positionReached && headingReached) {
                 targetReached = true;
                 break;
             }
 
-            // Calculate drive angle in field frame
-            double angleToTarget = Math.atan2(errorX, errorY);
+            // Calculate drive powers
+            double driveX = 0.0;
+            double driveY = 0.0;
+            double rotationPower = 0.0;
+            
+            // Only drive if position not yet reached
+            if (!positionReached) {
+                // Calculate drive angle in field frame
+                double angleToTarget = Math.atan2(errorX, errorY);
 
-            // Speed scaling based on distance (slow down as we approach target)
-            double speedScale = maxSpeed;
-            if (distance < SLOWDOWN_DIST) {
-                speedScale = MIN_POWER + (maxSpeed - MIN_POWER) * (distance / SLOWDOWN_DIST);
-            }
+                // Speed scaling based on distance (slow down as we approach target)
+                double speedScale = maxSpeed;
+                if (distance < SLOWDOWN_DIST) {
+                    speedScale = MIN_POWER + (maxSpeed - MIN_POWER) * (distance / SLOWDOWN_DIST);
+                }
 
-            // Convert field-centric movement to robot-centric
-            double robotAngle = angleToTarget - currentHeadingRad;
-            double driveX = Math.sin(robotAngle) * speedScale * KP_DRIVE * distance;
-            double driveY = Math.cos(robotAngle) * speedScale * KP_DRIVE * distance;
+                // Convert field-centric movement to robot-centric
+                double robotAngle = angleToTarget - currentHeadingRad;
+                driveX = Math.sin(robotAngle) * speedScale * KP_DRIVE * distance;
+                driveY = Math.cos(robotAngle) * speedScale * KP_DRIVE * distance;
 
-            // Clamp drive powers
-            driveX = Range.clip(driveX, -maxSpeed, maxSpeed);
-            driveY = Range.clip(driveY, -maxSpeed, maxSpeed);
+                // Clamp drive powers
+                driveX = Range.clip(driveX, -maxSpeed, maxSpeed);
+                driveY = Range.clip(driveY, -maxSpeed, maxSpeed);
 
-            // Apply minimum power if needed to overcome friction
-            if (distance > POSITION_TOLERANCE) {
+                // Apply minimum power to overcome friction (only when driving)
                 if (Math.abs(driveX) < MIN_POWER && Math.abs(driveX) > 0.01) {
                     driveX = Math.signum(driveX) * MIN_POWER;
                 }
@@ -902,9 +913,27 @@ public class AutoBlueBackML extends LinearOpMode {
                 }
             }
 
-            // Heading correction
-            double rotationPower = headingError * KP_HEADING;
-            rotationPower = Range.clip(rotationPower, -maxSpeed * 0.5, maxSpeed * 0.5);
+            // Heading correction - scale down when far from position to prevent oscillation
+            if (!headingReached) {
+                // Calculate rotation scale factor (0 to 1) based on distance
+                // Full rotation when close to target, reduced when far
+                double rotationScale = 1.0;
+                if (distance > ROTATION_SCALE_DIST) {
+                    // When far from target, reduce rotation to 20% to prevent oscillation
+                    rotationScale = 0.2;
+                } else if (distance > POSITION_TOLERANCE) {
+                    // Linear interpolation between 20% and 100%
+                    rotationScale = 0.2 + 0.8 * (1.0 - (distance / ROTATION_SCALE_DIST));
+                }
+                
+                rotationPower = headingError * KP_HEADING * rotationScale;
+                rotationPower = Range.clip(rotationPower, -maxSpeed * 0.5, maxSpeed * 0.5);
+                
+                // Apply minimum rotation power only when position is reached (pure rotation)
+                if (positionReached && Math.abs(rotationPower) < MIN_POWER && Math.abs(headingError) > HEADING_TOLERANCE) {
+                    rotationPower = Math.signum(rotationPower) * MIN_POWER;
+                }
+            }
 
             // Calculate mecanum wheel powers
             double frontLeftPower = -driveY + driveX + rotationPower;
@@ -940,6 +969,7 @@ public class AutoBlueBackML extends LinearOpMode {
             telemetry.addData("Error", "X: %.1f, Y: %.1f", errorX, errorY);
             telemetry.addData("Distance to target", "%.2f in", distance);
             telemetry.addData("Heading Error", "%.1f°", headingError);
+            telemetry.addData("Phase", positionReached ? "ROTATING" : "DRIVING");
             telemetry.addData("xOdo Raw", "%d ticks", getXOdoPosition());
             telemetry.addData("yOdo Raw", "%d ticks", getYOdoPosition());
             telemetry.update();
