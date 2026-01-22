@@ -18,10 +18,11 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 public class TeleOpTourneyMega extends LinearOpMode {
 
     // Motor power constants
-    private static final double INTAKE_POWER = -1.0;
-    private static final double LAUNCH_MOTOR_POWER = -0.8;
+    private static double INTAKE_POWER = -1.0;
+    private static double LAUNCH_MOTOR_POWER = -0.8;
     private static final double SPATULA_SERVO_POWER = 0.8;
-    private static final double SPIN_SERVO_SPEED = 0.5;
+    private static final double SPIN_SPIN_SERVO_POWER = 0.5;
+    private static final double SPIN_SERVO_SPEED = 0.1;
 
     // Navigation constants
     private static final double AUTO_MAX_SPEED = 0.7;
@@ -85,6 +86,8 @@ public class TeleOpTourneyMega extends LinearOpMode {
     private int lastLeftEncoderPos = 0;
     private int lastRightEncoderPos = 0;
     private int lastStrafeEncoderPos = 0;
+    private double DOWN = -0.1;
+    private double UP = 0.1;
     private boolean positionDetected = false;
 
     private boolean targetingRed = true; // Default to RED alliance
@@ -186,6 +189,7 @@ public class TeleOpTourneyMega extends LinearOpMode {
                     (currentGamepad2.right_bumper && !previousGamepad2.right_bumper);
 
             launchMotor.setPower(-LAUNCH_MOTOR_POWER);
+
 
             double turretInput = 0;
 
@@ -313,24 +317,13 @@ public class TeleOpTourneyMega extends LinearOpMode {
                 rx = currentGamepad1.right_trigger - currentGamepad1.left_trigger;
 
                 // DPAD precision control (overrides joystick)
-                if (currentGamepad1.dpad_up) {
-                    y = -0.3;  // Forward
-                    x = 0;
-                    rx = 0;
-                } else if (currentGamepad1.dpad_down) {
-                    y = 0.3;  // Backward
-                    x = 0;
-                    rx = 0;
-                } else if (currentGamepad1.dpad_left) {
-                    y = 0;
-                    x = -0.3;  // Strafe left
-                    rx = 0;
-                } else if (currentGamepad1.dpad_right) {
-                    y = 0;
-                    x = 0.3;  // Strafe right
-                    rx = 0;
+                while(0.0 > LAUNCH_MOTOR_POWER && LAUNCH_MOTOR_POWER > -1.0) {
+                    if (currentGamepad1.dpad_up) {
+                        LAUNCH_MOTOR_POWER -= UP;
+                    } else if (currentGamepad1.dpad_down) {
+                        LAUNCH_MOTOR_POWER += DOWN;
+                    }
                 }
-
                 maxDrivePower = GAMEPAD1_MAX_POWER;
                 activeDriver = "DRIVER 1";
             } else if (gamepad2Active) {
@@ -578,7 +571,6 @@ public class TeleOpTourneyMega extends LinearOpMode {
             sleep(100);
         }
     }
-
     private void autoAimAndShoot() {
         telemetry.addLine("Auto-aiming at RED target (Tag 24)...");
         telemetry.update();
@@ -704,16 +696,13 @@ public class TeleOpTourneyMega extends LinearOpMode {
 //eshaaaaaaaaaaaa
     private void launchBalls(int count) {
         for (int i = 0; i < count; i++) {
-            stopServo.setPosition(0.5);
-            sleep(200);
-            spatulaServo.setPosition(1.0);
+            intakeMotor.setPower(-1);
+            sleep(600);
+            intakeMotor.setPower(0);
+            spatulaServo.setPosition(0.0);
             sleep(1000);
             spatulaServo.setPosition(1.0);
             sleep(200);
-            intakeMotor.setPower(-1.0);
-            sleep(100);
-            intakeMotor.setPower(1.0);
-            stopServo.setPosition(0.0);
         }
     }
 
