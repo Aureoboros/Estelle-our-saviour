@@ -1,5 +1,3 @@
-//DO NOT TOUCH THIS OR I WILL REARRANGE YOUR ORGANS FOR AN ART PIECE :) - Eshanvi
-// NO BUT SRSLY PLEASE DON'T!!!!
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
@@ -21,7 +19,7 @@ public class TeleOpTourneyMega extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = -1.0;
-    private static final double LAUNCH_MOTOR_POWER = -1.0;
+    private static final double LAUNCH_MOTOR_POWER = -0.8;
     private static final double SPATULA_SERVO_POWER = 0.8;
     private static final double SPIN_SERVO_SPEED = 0.5;
 
@@ -186,21 +184,31 @@ public class TeleOpTourneyMega extends LinearOpMode {
                     (currentGamepad2.left_bumper && !previousGamepad2.left_bumper);
             boolean rightBumperPressed = (currentGamepad1.right_bumper && !previousGamepad1.right_bumper) ||
                     (currentGamepad2.right_bumper && !previousGamepad2.right_bumper);
-            // ========== L BUMPER - TURRET LEFT ==========
-            if (leftBumperPressed) {
+
+            launchMotor.setPower(-LAUNCH_MOTOR_POWER);
+
+            double turretInput = 0;
+
+            if(currentGamepad1.left_bumper) {
+                turretInput += 1.0;  // Rotate left
+            }
+            if(currentGamepad1.right_bumper) {
+                turretInput -= 1.0;  // Rotate right
+            }
+            if (currentGamepad2.left_bumper) {
+                turretInput += 1.0;  // Rotate left
+            }
+            if (currentGamepad2.right_bumper) {
+                turretInput -= 1.0;  // Rotate right
+            }
+            if (Math.abs(turretInput) > 0.1) {
                 double currentPos = spinSpinServo.getPosition();
-                double newPos = currentPos - (SPIN_SERVO_SPEED * 0.05);
-                newPos = Range.clip(newPos, 0.0, 1.0);
+                double deltaPos = turretInput * SPIN_SERVO_SPEED * 0.02;  // Adjust 0.02 for rotation speed
+                double newPos = currentPos + deltaPos;
+                newPos = Range.clip(newPos, 0.0, 0.2);
                 spinSpinServo.setPosition(newPos);
             }
 
-            // ========== R BUMPER - TURRET RIGHT ==========
-            if (rightBumperPressed) {
-                double currentPos = spinSpinServo.getPosition();
-                double newPos = currentPos + (SPIN_SERVO_SPEED * 0.05);
-                newPos = Range.clip(newPos, 0.0, 1.0);
-                spinSpinServo.setPosition(newPos);
-            }
                 // ========== Y BUTTON - FIELD CENTRIC TOGGLE ==========
             if (yPressed) {
                 if (toggleintake == 1) {
@@ -230,7 +238,7 @@ public class TeleOpTourneyMega extends LinearOpMode {
             }
             if (xPressed) {
 
-                launchBalls(3);
+                launchBalls(1);
             }
 
             // ========== BACK BUTTON - RESET ODOMETRY ==========
@@ -513,10 +521,9 @@ public class TeleOpTourneyMega extends LinearOpMode {
         yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // Initialize servo positions
-        stopServo.setPosition(1.0); // Closed
+        stopServo.setPosition(0.0); // Closed
         spatulaServo.setPosition(1.0); // Down
-        spinSpinServo.setPosition(1.65); // Stop the spinservo to turn too far
-
+        spinSpinServo.setPosition(0.01); // Stop the spinservo to turn too far
         // ========== INIT TELEMETRY ==========
         telemetry.addLine("========================================");
         telemetry.addLine("TELEOP");
@@ -694,26 +701,19 @@ public class TeleOpTourneyMega extends LinearOpMode {
         double power = Range.clip(rpm / MAX_MOTOR_RPM, 0.0, 1.0);
         launchMotor.setPower(power);
     }
-
+//eshaaaaaaaaaaaa
     private void launchBalls(int count) {
-        launchMotor.setPower(-LAUNCH_MOTOR_POWER);
-        sleep(2000);
         for (int i = 0; i < count; i++) {
-            // Open stopper to allow ball through
-            stopServo.setPosition(0.0);
-            sleep(100);
-            // Close stopper to stop other balls from going under the spatula
             stopServo.setPosition(0.5);
-
-            // Actuate spatula to push ball
-            spatulaServo.setPosition(0.0);
+            sleep(200);
+            spatulaServo.setPosition(1.0);
             sleep(1000);
             spatulaServo.setPosition(1.0);
-            while (spatulaServo.getPosition() != 1.0);
-
-            // Open stopper to allow ball through
-            stopServo.setPosition(1.0);
             sleep(200);
+            intakeMotor.setPower(-1.0);
+            sleep(100);
+            intakeMotor.setPower(1.0);
+            stopServo.setPosition(0.0);
         }
     }
 
