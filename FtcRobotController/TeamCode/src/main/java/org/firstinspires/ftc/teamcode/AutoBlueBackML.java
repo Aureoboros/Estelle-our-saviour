@@ -65,8 +65,9 @@ public class AutoBlueBackML extends LinearOpMode {
     private static final double FIELD_MIN_FEET = -6.0;
     private static final double FIELD_MAX_FEET = 6.0;
 
-    // Odometry constants
-    private static final double ODOMETRY_INCHES_PER_TICK = 0.01; // CALIBRATE THIS
+    // Odometry constants (goBILDA Odometry Pod with 35mm wheel)
+    // Calculation: (π × 1.378 inches) / 2000 CPR = 0.002164 inches per tick
+    private static final double ODOMETRY_INCHES_PER_TICK = 0.002164;
     private static final double COUNTS_PER_MM = 1.0; // CALIBRATE THIS
 
     // Tracking
@@ -121,6 +122,15 @@ public class AutoBlueBackML extends LinearOpMode {
 
         waitForStart();
         if (isStopRequested()) return;
+
+        // Initialize absolute odometry with robot's starting position
+        // This ensures odo wheels know the proper field position from the start
+        double startXInches = robotX * 12.0;  // Convert feet to inches
+        double startYInches = robotY * 12.0;
+        initializeAbsoluteOdometry(startXInches, startYInches);
+        
+        telemetry.addData("Odometry Initialized", "X: %.1f in, Y: %.1f in", startXInches, startYInches);
+        telemetry.update();
 
         // ========== SEQUENCE START ==========
 
@@ -234,7 +244,7 @@ public class AutoBlueBackML extends LinearOpMode {
 
         // Set motor directions
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
-        backRightMotor.setDirection(DcMotor.Direction.REVERSE);
+        frontRightMotor.setDirection(DcMotor.Direction.REVERSE);
 
         // Reset encoders
         xodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -437,7 +447,7 @@ public class AutoBlueBackML extends LinearOpMode {
         double currentPos = spinSpinServo.getPosition();
         double angleOffset = tx / 1800.0;
         
-        double newPos = Range.clip(currentPos + angleOffset, 0.0, 1.0);
+        double newPos = Range.clip(currentPos + angleOffset, 0.0, 0.2);
         spinSpinServo.setPosition(newPos);
         
         sleep(300); // Allow turret to settle
@@ -449,20 +459,24 @@ public class AutoBlueBackML extends LinearOpMode {
     }
 
     private void launchBalls(int count) {
+        launchMotor.setPower(-LAUNCH_MOTOR_POWER);
+        sleep(2000);
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
-            stopServo.setPosition(0.0);
-            sleep(100);
-            
-            // Actuate spatula to push ball
-            spatulaServo.setPosition(1.0);
-            sleep(600);
-            spatulaServo.setPosition(0.0);
-            sleep(200);
-            
-            // Close stopper
             stopServo.setPosition(1.0);
-            sleep(200);
+            sleep(100);
+            // Close stopper to stop other balls from going under the spatula
+            stopServo.setPosition(0.5);
+            while (stopServo.getPosition() != 0.5);
+
+            // Actuate spatula to push ball
+            spatulaServo.setPosition(0.0);
+            sleep(600);
+            spatulaServo.setPosition(1.0);
+            while (spatulaServo.getPosition() != 1.0);
+            // Close stopper
+            //stopServo.setPosition(1.0);
+            //sleep(200);
         }
     }
 
@@ -665,10 +679,11 @@ public class AutoBlueBackML extends LinearOpMode {
 
     /**
      * Gets the raw encoder position from the X odometry pod.
-     * @return Current encoder tick count from xOdo
+     * Note: Value is negated to match motor connection direction.
+     * @return Current encoder tick count from xOdo (negated)
      */
     public int getXOdoPosition() {
-        return xodo.getCurrentPosition();
+        return -xodo.getCurrentPosition();
     }
 
     /**

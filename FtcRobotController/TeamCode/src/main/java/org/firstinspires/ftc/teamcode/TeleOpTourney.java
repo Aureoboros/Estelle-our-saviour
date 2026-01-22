@@ -71,8 +71,9 @@ public class TeleOpTourney extends LinearOpMode {
     private static final double FIELD_MIN_FEET = -6.0;
     private static final double FIELD_MAX_FEET = 6.0;
 
-    // Odometry constants
-    private static final double ODOMETRY_INCHES_PER_TICK = 0.01; // CALIBRATE THIS
+    // Odometry constants (goBILDA Odometry Pod with 35mm wheel)
+    // Calculation: (π × 1.378 inches) / 2000 CPR = 0.002164 inches per tick
+    private static final double ODOMETRY_INCHES_PER_TICK = 0.002164;
     private static final double COUNTS_PER_MM = 1.0; // CALIBRATE THIS
 
     // Tracking
@@ -144,7 +145,7 @@ public class TeleOpTourney extends LinearOpMode {
         Gamepad previousGamepad2 = new Gamepad();
 
         // Toggle states
-        boolean slowMode = true;
+        boolean slowMode = false;
         boolean fieldCentric = false;
 
         waitForStart();
@@ -926,10 +927,11 @@ public class TeleOpTourney extends LinearOpMode {
 
     /**
      * Gets the raw encoder position from the X odometry pod.
-     * @return Current encoder tick count from xOdo
+     * Note: Value is negated to match motor connection direction.
+     * @return Current encoder tick count from xOdo (negated)
      */
     public int getXOdoPosition() {
-        return xodo.getCurrentPosition();
+        return -xodo.getCurrentPosition();
     }
 
     /**
@@ -942,6 +944,7 @@ public class TeleOpTourney extends LinearOpMode {
 
     /**
      * Gets the X odometry pod position converted to inches.
+     * Note: Value is negated to match motor connection direction.
      * @return X odometry position in inches
      */
     public double getXOdoInches() {
