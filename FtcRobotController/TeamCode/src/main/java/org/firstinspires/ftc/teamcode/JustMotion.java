@@ -173,10 +173,20 @@ public class JustMotion extends LinearOpMode {
             if (startPressed) {
                 slowMode = !slowMode;
             }
-            
+
+            launchMotor.setPower(0.8);
+
             // ========== Y BUTTON - FIELD CENTRIC TOGGLE ==========
             if (yPressed) {
-                fieldCentric = !fieldCentric;
+                // fieldCentric = !fieldCentric;
+                if (toggles == 1) {
+                    intakeMotor.setPower(1);
+                    toggles = 0;
+                }
+                else {
+                    intakeMotor.setPower(0);
+                    toggles = 1;
+                }
             }
             
             // ========== A/B/X BUTTONS - SPEED PRESETS ==========
@@ -265,13 +275,12 @@ public class JustMotion extends LinearOpMode {
                         break;
                 }
 
-
                 if (toggle == 1) {
-                    launchMotor.setPower(-1 * speedMultiplier);
+                    stopServo.setPosition(1.0);
                     toggle = 0;
                 }
                 else {
-                    launchMotor.setPower(0);
+                    stopServo.setPosition(0.5);
                     toggle = 1;
                 }
 

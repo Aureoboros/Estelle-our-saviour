@@ -19,7 +19,7 @@ public class TeleOpTourney extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = -1.0;
-    private static final double LAUNCH_MOTOR_POWER = 0.7;
+    private static final double LAUNCH_MOTOR_POWER = -0.7;
     private static final double SPATULA_SERVO_POWER = 0.8;
 
     // Navigation constants
@@ -505,7 +505,8 @@ public class TeleOpTourney extends LinearOpMode {
         // Initialize servo positions
         stopServo.setPosition(0.0); // Closed
         spatulaServo.setPosition(1.0); // Down
-        spinSpinServo.setPosition(0.35); // Stop the spinservo to turn too far
+        spinSpinServo.setPosition(0.01); // Stop the spinservo to turn too far
+
 
 
         // ========== INIT TELEMETRY ==========
@@ -675,7 +676,7 @@ public class TeleOpTourney extends LinearOpMode {
         double currentPos = spinSpinServo.getPosition();
         double angleOffset = tx / 1800.0;
 
-        double newPos = Range.clip(currentPos + angleOffset, 0.0, 1.0);
+        double newPos = Range.clip(currentPos + angleOffset, 0.0, 0.2);
         spinSpinServo.setPosition(newPos);
 
         sleep(300); // Allow turret to settle

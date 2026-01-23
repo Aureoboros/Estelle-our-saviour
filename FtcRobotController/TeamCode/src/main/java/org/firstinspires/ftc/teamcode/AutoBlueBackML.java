@@ -897,8 +897,8 @@ public class AutoBlueBackML extends LinearOpMode {
 
                 // Convert field-centric movement to robot-centric
                 double robotAngle = angleToTarget - currentHeadingRad;
-                driveX = Math.sin(robotAngle) * speedScale * KP_DRIVE * distance;
-                driveY = Math.cos(robotAngle) * speedScale * KP_DRIVE * distance;
+                driveX = Math.sin(robotAngle) * KP_DRIVE * distance; // removed speedScale bc distance^2
+                driveY = Math.cos(robotAngle) * KP_DRIVE * distance; // same thing here
 
                 // Clamp drive powers
                 driveX = Range.clip(driveX, -maxSpeed, maxSpeed);
