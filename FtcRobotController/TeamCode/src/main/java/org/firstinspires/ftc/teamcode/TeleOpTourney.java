@@ -152,6 +152,7 @@ public class TeleOpTourney extends LinearOpMode {
         if (isStopRequested()) return;
         launchMotor.setPower(-LAUNCH_MOTOR_POWER);
         intakeMotor.setPower(INTAKE_POWER);
+        stopServo.setPosition(0.5);
 
         while (opModeIsActive()) {
             // ========== UPDATE GAMEPAD STATES ==========
@@ -505,9 +506,10 @@ public class TeleOpTourney extends LinearOpMode {
         yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // Initialize servo positions
-        stopServo.setPosition(0.0); // Closed
+        stopServo.setPosition(0.5); // Closed
         spatulaServo.setPosition(1.0); // Down
         spinSpinServo.setPosition(0.01); // Stop the spinservo to turn too far
+        launchMotor.setPower(-LAUNCH_MOTOR_POWER);
 
 
 
@@ -707,16 +709,17 @@ public class TeleOpTourney extends LinearOpMode {
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
             stopServo.setPosition(1.0);
-            sleep(600);
+            sleep(1000);
             // Close stopper to stop other balls from going under the spatula
-            stopServo.setPosition(0.0);
-            while (stopServo.getPosition() != 0.0);
-
+            stopServo.setPosition(0.5);
+            //while (stopServo.getPosition() != 0.0);
+            sleep(1500);
             // Actuate spatula to push ball
             spatulaServo.setPosition(0.0);
-            sleep(600);
+            sleep(1000);
             spatulaServo.setPosition(1.0);
-            while (spatulaServo.getPosition() != 1.0);
+            sleep(1500);
+            //while (spatulaServo.getPosition() != 1.0);
             // Close stopper
             //stopServo.setPosition(1.0);
             //sleep(200);
