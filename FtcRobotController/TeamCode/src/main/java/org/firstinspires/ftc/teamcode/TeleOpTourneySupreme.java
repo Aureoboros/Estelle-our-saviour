@@ -14,7 +14,7 @@ import com.qualcomm.hardware.limelightvision.LLResultTypes;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-@TeleOp(name = "TeleOpTourneyMega")
+@TeleOp(name = "TeleOpTourneySupreme")
 public class TeleOpTourneySupreme extends LinearOpMode {
 
     // Motor power constants
