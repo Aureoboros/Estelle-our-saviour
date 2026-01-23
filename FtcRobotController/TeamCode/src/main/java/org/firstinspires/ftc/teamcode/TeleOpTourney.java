@@ -216,11 +216,11 @@ public class TeleOpTourney extends LinearOpMode {
             }
             if (bPressed) {
                 if (togglestopper == 1) {
-                    stopServo.setPosition(0);
+                    stopServo.setPosition(0.5);
                     togglestopper = 0;
                 }
                 else {
-                    stopServo.setPosition(1);
+                    stopServo.setPosition(1.0);
                     togglestopper = 1;
                 }
             }

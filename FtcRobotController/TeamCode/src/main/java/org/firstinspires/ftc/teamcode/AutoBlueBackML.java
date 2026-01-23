@@ -222,6 +222,9 @@ public class AutoBlueBackML extends LinearOpMode {
         spinSpinServo = hardwareMap.get(Servo.class, "spinSpinServo");
         spatulaServo = hardwareMap.get(Servo.class, "spatulaServo");
         stopServo = hardwareMap.get(Servo.class, "stopServo");
+        telemetry.addData("stop position", stopServo.getPosition());
+        telemetry.update();
+
 
         // Initialize IMU
         imu = hardwareMap.get(IMU.class, "imu");
@@ -458,22 +461,36 @@ public class AutoBlueBackML extends LinearOpMode {
         launchMotor.setPower(power);
     }
 
+    /*
+     Current logic of launchBalls
+     Launcher Motor always on
+     Intake always on
+     Spatula initial position down
+     Open stopper for 600ms (loop begin)
+     Close stopper
+     Wait for stopper to reach closed state
+     Set Spatula up for 600ms
+     Spatula down
+     Wait for Spatula to come down
+     Go back to open stopper state (loop begin)
+    */
     private void launchBalls(int count) {
-        launchMotor.setPower(-LAUNCH_MOTOR_POWER);
-        sleep(2000);
+        //launchMotor.setPower(-LAUNCH_MOTOR_POWER);
+        //sleep(2000);
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
             stopServo.setPosition(1.0);
-            sleep(100);
+            sleep(1000);
             // Close stopper to stop other balls from going under the spatula
             stopServo.setPosition(0.5);
-            while (stopServo.getPosition() != 0.5);
-
+            //while (stopServo.getPosition() != 0.0);
+            sleep(1500);
             // Actuate spatula to push ball
             spatulaServo.setPosition(0.0);
-            sleep(600);
+            sleep(1000);
             spatulaServo.setPosition(1.0);
-            while (spatulaServo.getPosition() != 1.0);
+            sleep(1500);
+            //while (spatulaServo.getPosition() != 1.0);
             // Close stopper
             //stopServo.setPosition(1.0);
             //sleep(200);
