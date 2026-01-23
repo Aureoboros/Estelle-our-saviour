@@ -150,6 +150,7 @@ public class TeleOpTourney extends LinearOpMode {
 
         waitForStart();
         if (isStopRequested()) return;
+        launchMotor.setPower(-LAUNCH_MOTOR_POWER);
 
         while (opModeIsActive()) {
             // ========== UPDATE GAMEPAD STATES ==========
@@ -684,18 +685,18 @@ public class TeleOpTourney extends LinearOpMode {
 
     private void setLauncherSpeed(double rpm) {
         double power = Range.clip(rpm / MAX_MOTOR_RPM, 0.0, 1.0);
-        launchMotor.setPower(power);
+        launchMotor.setPower(-1.0 * power);
     }
 
     private void launchBalls(int count) {
-        launchMotor.setPower(-LAUNCH_MOTOR_POWER);
-        sleep(2000);
+        //launchMotor.setPower(-LAUNCH_MOTOR_POWER);
+        //sleep(2000);
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
             stopServo.setPosition(1.0);
-            sleep(100);
+            sleep(600);
             // Close stopper to stop other balls from going under the spatula
-            stopServo.setPosition(0.5);
+            stopServo.setPosition(0.0);
             while (stopServo.getPosition() != 0.5);
 
             // Actuate spatula to push ball
