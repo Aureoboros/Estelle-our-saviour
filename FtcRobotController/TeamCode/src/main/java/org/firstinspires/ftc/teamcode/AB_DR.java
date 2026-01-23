@@ -14,8 +14,8 @@ import com.qualcomm.hardware.limelightvision.LLResultTypes;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-@Autonomous(name="AutoBlueBackTest with MathLib", group="Autonomous")
-public class AutoBlueBackML extends LinearOpMode {
+@Autonomous(name="AutoBlueBackTest with DriveToPosition (no odo)", group="Autonomous")
+public class AB_DR extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = 1.0;
@@ -42,11 +42,11 @@ public class AutoBlueBackML extends LinearOpMode {
 
     // DECODE Season AprilTag positions (in mm from field center)
     private static final double[][] TAG_POSITIONS = {
-        {0.0, FIELD_SIZE_MM / 2},      // Tag 20 - Blue Alliance Goal
-        {0.0, 1828.8},                 // Tag 21 - Neutral (0, 6ft)
-        {0.0, 1828.8},                 // Tag 22 - Neutral (0, 6ft)
-        {0.0, 1828.8},                 // Tag 23 - Neutral (0, 6ft)
-        {0.0, -FIELD_SIZE_MM / 2}      // Tag 24 - Red Alliance Goal
+            {0.0, FIELD_SIZE_MM / 2},      // Tag 20 - Blue Alliance Goal
+            {0.0, 1828.8},                 // Tag 21 - Neutral (0, 6ft)
+            {0.0, 1828.8},                 // Tag 22 - Neutral (0, 6ft)
+            {0.0, 1828.8},                 // Tag 23 - Neutral (0, 6ft)
+            {0.0, -FIELD_SIZE_MM / 2}      // Tag 24 - Red Alliance Goal
     };
 
     // Field positions (in feet, measured from field center)
@@ -128,7 +128,7 @@ public class AutoBlueBackML extends LinearOpMode {
         double startXInches = robotX * 12.0;  // Convert feet to inches
         double startYInches = robotY * 12.0;
         initializeAbsoluteOdometry(startXInches, startYInches);
-        
+
         telemetry.addData("Odometry Initialized", "X: %.1f in, Y: %.1f in", startXInches, startYInches);
         telemetry.update();
 
@@ -137,15 +137,15 @@ public class AutoBlueBackML extends LinearOpMode {
         // 1. Shoot balls with auto-aim
         telemetry.addData("Step 1", "Navigate and Shoot Balls");
         telemetry.update();
-        // driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
-        driveToPositionOdoWheels(BLUE_SHOOT_X * 12, BLUE_SHOOT_Y * 12);
+        driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
+        // driveToPositionOdoWheels(BLUE_SHOOT_X * 12, BLUE_SHOOT_Y * 12);
         autoAimAndShoot();
 
         // 4. Intake gate, shoot balls, repeat
         // for (int i = 0; i < 4; i++) {
         //     telemetry.addData("Loop Iteration", i + 1);
         //     telemetry.update();
-            
+
         //     // Intake gate
         //     telemetry.addData("Loop Step 1", "Intake Gate");
         //     telemetry.update();
@@ -167,10 +167,10 @@ public class AutoBlueBackML extends LinearOpMode {
         // 3. Shoot balls with auto-aim
         telemetry.addData("Step 3", "Navigate and Shoot Balls");
         telemetry.update();
-        // driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
-        driveToPositionOdoWheels(BLUE_SHOOT_X * 12, BLUE_SHOOT_Y * 12);
+        driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
+        // driveToPositionOdoWheels(BLUE_SHOOT_X * 12, BLUE_SHOOT_Y * 12);
         autoAimAndShoot();
-        
+
         telemetry.addData("Step 4", "Intake Middle Spike");
         telemetry.update();
         intakeSpikeBalls(BLUE_MIDDLE_SPIKE_X * 12, BLUE_MIDDLE_SPIKE_Y * 12, 0);
@@ -178,8 +178,8 @@ public class AutoBlueBackML extends LinearOpMode {
         // 3. Shoot balls with auto-aim
         telemetry.addData("Step 5", "Navigate and Shoot Balls");
         telemetry.update();
-        // driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
-        driveToPositionOdoWheels(BLUE_SHOOT_X * 12, BLUE_SHOOT_Y * 12);
+        driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
+        // driveToPositionOdoWheels(BLUE_SHOOT_X * 12, BLUE_SHOOT_Y * 12);
         autoAimAndShoot();
 
         telemetry.addData("Step 6", "Intake Top Spike");
@@ -188,12 +188,12 @@ public class AutoBlueBackML extends LinearOpMode {
 
         telemetry.addData("Step 7", "Navigate and Shoot Balls");
         telemetry.update();
-        // driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
-        driveToPositionOdoWheels(BLUE_SHOOT_X * 12, BLUE_SHOOT_Y * 12);
+        driveToPosition(BLUE_SHOOT_X, BLUE_SHOOT_Y, 0);
+        // driveToPositionOdoWheels(BLUE_SHOOT_X * 12, BLUE_SHOOT_Y * 12);
         autoAimAndShoot();
-        
-                // 2. Intake middle spike
-        
+
+        // 2. Intake middle spike
+
         // Stop all motors
         stopAllMotors();
 
@@ -226,15 +226,15 @@ public class AutoBlueBackML extends LinearOpMode {
         // Initialize IMU
         imu = hardwareMap.get(IMU.class, "imu");
         IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
-            RevHubOrientationOnRobot.LogoFacingDirection.UP,
-            RevHubOrientationOnRobot.UsbFacingDirection.FORWARD));
+                RevHubOrientationOnRobot.LogoFacingDirection.UP,
+                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD));
         imu.initialize(parameters);
 
         // Initialize Limelight
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(0);
         limelight.start();
-        
+
         // Verify Limelight connection
         telemetry.addLine("--- Limelight Status ---");
         telemetry.addData("Limelight Connected", limelight.isConnected());
@@ -260,54 +260,54 @@ public class AutoBlueBackML extends LinearOpMode {
     private void detectInitialPosition() {
         telemetry.addLine("Detecting initial position...");
         telemetry.update();
-        
+
         for (int i = 0; i < 30 && !positionDetected; i++) {
             LLResult result = limelight.getLatestResult();
-            
+
             // Debug: Show raw Limelight data
             telemetry.addLine("--- Limelight Raw Data ---");
             telemetry.addData("Attempt", "%d/30", i + 1);
             telemetry.addData("Limelight Connected", limelight.isConnected());
             telemetry.addData("Limelight Running", limelight.isRunning());
-            
+
             if (result == null) {
                 telemetry.addData("Result", "NULL - No data from Limelight");
                 telemetry.update();
                 sleep(100);
                 continue;
             }
-            
+
             telemetry.addData("Result Valid", result.isValid());
             telemetry.addData("Pipeline Index", result.getPipelineIndex());
             telemetry.addData("Timestamp", "%.3f", result.getTimestamp());
             telemetry.addData("Targeting Latency", "%.1f ms", result.getTargetingLatency());
-            
+
             // Show fiducial (AprilTag) results
             int fiducialCount = result.getFiducialResults().size();
             telemetry.addData("AprilTags Detected", fiducialCount);
-            
+
             if (result.isValid() && fiducialCount > 0) {
                 for (LLResultTypes.FiducialResult fiducial : result.getFiducialResults()) {
                     int tagId = fiducial.getFiducialId();
-                    
+
                     telemetry.addLine();
                     telemetry.addData("Tag ID", tagId);
                     telemetry.addData("TX (horizontal offset)", "%.2f°", fiducial.getTargetXDegrees());
                     telemetry.addData("TY (vertical offset)", "%.2f°", fiducial.getTargetYDegrees());
                     telemetry.addData("Target Area", "%.4f", fiducial.getTargetArea());
-                    
+
                     // Use any visible tag to establish position
                     if (tagId >= 20 && tagId <= 24) {
                         double distance = calculateDistanceFromLimelight(fiducial);
                         double angle = Math.toRadians(fiducial.getTargetXDegrees());
-                        
+
                         telemetry.addData("Calculated Distance", "%.1f mm", distance);
-                        
+
                         // Calculate robot position relative to tag
                         double[] tagPos = TAG_POSITIONS[tagId - 20];
                         robotX = (tagPos[0] - distance * Math.sin(angle)) / 304.8; // mm to feet
                         robotY = (tagPos[1] - distance * Math.cos(angle)) / 304.8;
-                        
+
                         positionDetected = true;
                         telemetry.addLine();
                         telemetry.addData("✓ Position Detected via Tag", tagId);
@@ -321,11 +321,11 @@ public class AutoBlueBackML extends LinearOpMode {
                 telemetry.addLine();
                 telemetry.addData("Status", "No valid AprilTags in view");
             }
-            
+
             telemetry.update();
             sleep(100);
         }
-        
+
         if (!positionDetected) {
             telemetry.addLine("--- Position Detection Failed ---");
             telemetry.addData("Limelight Connected", limelight.isConnected());
@@ -338,14 +338,14 @@ public class AutoBlueBackML extends LinearOpMode {
     private void autoAimAndShoot() {
         telemetry.addLine("Auto-aiming at target...");
         telemetry.update();
-        
+
         boolean targetAcquired = false;
         double timeout = 3.0; // 3 second timeout
         double startTime = getRuntime();
-        
+
         while (opModeIsActive() && !targetAcquired && (getRuntime() - startTime) < timeout) {
             LLResult result = limelight.getLatestResult();
-            
+
             if (result != null && result.isValid() && result.getFiducialResults().size() > 0) {
                 for (LLResultTypes.FiducialResult fiducial : result.getFiducialResults()) {
                     if (fiducial.getFiducialId() == TARGET_APRILTAG_ID) {
@@ -353,23 +353,23 @@ public class AutoBlueBackML extends LinearOpMode {
                         double limelightDistance = calculateDistanceFromLimelight(fiducial);
                         double odoDistance = confirmPositionWithOdometry(TARGET_APRILTAG_ID);
                         double finalDistance = (limelightDistance + odoDistance) / 2.0;
-                        
+
                         // Calculate required launch velocity and RPM
                         double requiredVelocity = calculateLaunchVelocity(finalDistance);
                         double requiredRPM = velocityToRPM(requiredVelocity);
-                        
+
                         // Aim turret
                         aimTurretAtTag(fiducial);
-                        
+
                         // Set launcher speed
                         setLauncherSpeed(requiredRPM);
                         sleep(500); // Allow launcher to spin up
-                        
+
                         // Launch sequence
                         launchBalls(3); // Launch 3 balls
-                        
+
                         targetAcquired = true;
-                        
+
                         telemetry.addData("Target Acquired", "Tag %d", TARGET_APRILTAG_ID);
                         telemetry.addData("Distance (mm)", "%.0f", finalDistance);
                         telemetry.addData("Required RPM", "%.0f", requiredRPM);
@@ -380,7 +380,7 @@ public class AutoBlueBackML extends LinearOpMode {
             }
             sleep(50);
         }
-        
+
         if (!targetAcquired) {
             telemetry.addLine("⚠ Target not found - shooting with default settings");
             telemetry.update();
@@ -388,7 +388,7 @@ public class AutoBlueBackML extends LinearOpMode {
             sleep(500);
             launchBalls(3);
         }
-        
+
         // Stop launcher
         launchMotor.setPower(0);
     }
@@ -396,24 +396,24 @@ public class AutoBlueBackML extends LinearOpMode {
     private double calculateDistanceFromLimelight(LLResultTypes.FiducialResult fiducial) {
         // Get target area for distance estimation
         double area = fiducial.getTargetArea();
-        
+
         // Rough distance estimation (CALIBRATE THIS based on your setup)
         // This is a placeholder formula - you'll need to calibrate
         double distance = 5000.0 / Math.sqrt(area);
-        
+
         return distance;
     }
 
     private double confirmPositionWithOdometry(int tagId) {
         if (tagId < 20 || tagId > 24) return 0;
-        
+
         double[] tagPos = TAG_POSITIONS[tagId - 20];
         double robotXmm = robotX * 304.8; // feet to mm
         double robotYmm = robotY * 304.8;
-        
+
         double dx = tagPos[0] - robotXmm;
         double dy = tagPos[1] - robotYmm;
-        
+
         return Math.sqrt(dx * dx + dy * dy);
     }
 
@@ -422,15 +422,15 @@ public class AutoBlueBackML extends LinearOpMode {
         double deltaY = TARGET_HEIGHT_ABOVE_TAG_MM - LAUNCH_HEIGHT_MM;
         double cosTheta = Math.cos(LAUNCH_ANGLE_RAD);
         double tanTheta = Math.tan(LAUNCH_ANGLE_RAD);
-        
+
         double numerator = GRAVITY_MM_S2 * horizontalDistance * horizontalDistance;
         double denominator = 2 * cosTheta * cosTheta * (horizontalDistance * tanTheta - deltaY);
-        
+
         if (denominator <= 0) {
             // Safety fallback
             return 3000.0; // Default velocity in mm/s
         }
-        
+
         return Math.sqrt(numerator / denominator);
     }
 
@@ -442,14 +442,14 @@ public class AutoBlueBackML extends LinearOpMode {
 
     private void aimTurretAtTag(LLResultTypes.FiducialResult fiducial) {
         double tx = fiducial.getTargetXDegrees();
-        
+
         // Convert angle to servo position (5 turn servo = 1800° range)
         double currentPos = spinSpinServo.getPosition();
         double angleOffset = tx / 1800.0;
-        
+
         double newPos = Range.clip(currentPos + angleOffset, 0.0, 0.2);
         spinSpinServo.setPosition(newPos);
-        
+
         sleep(300); // Allow turret to settle
     }
 
@@ -505,7 +505,7 @@ public class AutoBlueBackML extends LinearOpMode {
 
             double angleToTarget = Math.atan2(deltaX, deltaY);
             double speed = AUTO_MAX_SPEED;
-            
+
             if (distanceToTarget < SLOWDOWN_DISTANCE_FEET) {
                 double slowdownRatio = distanceToTarget / SLOWDOWN_DISTANCE_FEET;
                 speed = AUTO_MIN_SPEED + (AUTO_MAX_SPEED - AUTO_MIN_SPEED) * slowdownRatio;
@@ -639,38 +639,38 @@ public class AutoBlueBackML extends LinearOpMode {
     private void intakeSpikeBalls(double spike_x, double spike_y, double angle) {
         // spike_x and spike_y are already in INCHES (converted at call site)
         // angle is in DEGREES
-        driveToPositionOdoWheels(spike_x, spike_y, 0);
+        driveToPosition(spike_x, spike_y, 0);
         turnToAngle(Math.toRadians(-angle)); // turnToAngle expects radians
         intakeMotor.setPower(INTAKE_POWER);
         // Move 24 inches (2 feet) in the -X direction for intake
-        driveToPositionOdoWheels(spike_x - 24.0, spike_y, -angle); // driveToPositionOdoWheels expects degrees
+        driveToPosition(spike_x - 24.0, spike_y, -angle); // driveToPositionOdoWheels expects degrees
         intakeMotor.setPower(0);
-        driveToPositionOdoWheels(spike_x, spike_y, 0);
+        driveToPosition(spike_x, spike_y, 0);
     }
 
     private void turnToAngle(double targetAngle) {
         double startTime = getRuntime();
         double timeout = 3.0;
-        
+
         while (opModeIsActive() && (getRuntime() - startTime) < timeout) {
             double currentAngle = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
             double error = targetAngle - currentAngle;
-            
+
             while (error > Math.PI) error -= 2 * Math.PI;
             while (error < -Math.PI) error += 2 * Math.PI;
-            
+
             if (Math.abs(error) < Math.toRadians(ANGLE_TOLERANCE_DEGREES)) {
                 break;
             }
-            
+
             double turnPower = Range.clip(error * 0.5, -0.3, 0.3);
-            
+
             frontLeftMotor.setPower(turnPower);
             backLeftMotor.setPower(turnPower);
             frontRightMotor.setPower(-turnPower);
             backRightMotor.setPower(-turnPower);
         }
-        
+
         stopDriveMotors();
         sleep(100);
     }
@@ -725,7 +725,7 @@ public class AutoBlueBackML extends LinearOpMode {
     /**
      * Initializes the absolute odometry system with the robot's starting position.
      * Call this once at the start of autonomous with the robot's known field position.
-     * 
+     *
      * @param startXInches Starting X position in inches from field center
      * @param startYInches Starting Y position in inches from field center
      */
@@ -735,16 +735,16 @@ public class AutoBlueBackML extends LinearOpMode {
         yodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         xodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        
+
         // Set the absolute position to the known starting position
         absoluteFieldX = startXInches;
         absoluteFieldY = startYInches;
-        
+
         // Store current encoder positions as reference (use -ve for xodo, consistent with getXOdoInches)
         lastXOdoPosition = -absoluteFieldX * 12 / ODOMETRY_INCHES_PER_TICK;
         lastYOdoPosition = absoluteFieldY * 12 / ODOMETRY_INCHES_PER_TICK;
         absoluteOdometryInitialized = true;
-        
+
         telemetry.addData("Odometry Initialized", "X: %.1f in, Y: %.1f in", absoluteFieldX, absoluteFieldY);
         telemetry.update();
     }
@@ -757,26 +757,26 @@ public class AutoBlueBackML extends LinearOpMode {
         // Get current encoder positions (use -ve for xodo, consistent with getXOdoInches)
         int currentXOdo = -xodo.getCurrentPosition();
         int currentYOdo = yodo.getCurrentPosition();
-        
+
         // Calculate deltas since last update
         double deltaXTicks = currentXOdo - lastXOdoPosition;
         double deltaYTicks = currentYOdo - lastYOdoPosition;
-        
+
         // Convert ticks to inches
         double deltaXInches = deltaXTicks * ODOMETRY_INCHES_PER_TICK;
         double deltaYInches = deltaYTicks * ODOMETRY_INCHES_PER_TICK;
-        
+
         // Get current heading for field-centric conversion
         double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
-        
+
         // Convert robot-relative movement to field-relative movement
         double fieldDeltaX = deltaXInches * Math.cos(heading) - deltaYInches * Math.sin(heading);
         double fieldDeltaY = deltaXInches * Math.sin(heading) + deltaYInches * Math.cos(heading);
-        
+
         // Update absolute position
         absoluteFieldX += fieldDeltaX;
         absoluteFieldY += fieldDeltaY;
-        
+
         // Store current encoder positions for next update
         lastXOdoPosition = currentXOdo;
         lastYOdoPosition = currentYOdo;
@@ -801,7 +801,7 @@ public class AutoBlueBackML extends LinearOpMode {
     /**
      * Drives the robot to a specific ABSOLUTE position on the FTC 2026 field using xOdo and yOdo wheels.
      * Uses a PID-like control loop for smooth and accurate positioning.
-     * 
+     *
      * IMPORTANT: Call initializeAbsoluteOdometry() once at the start of autonomous before using this method.
      *
      * FTC 2026 Field Coordinates:
@@ -833,7 +833,7 @@ public class AutoBlueBackML extends LinearOpMode {
         final double KP_HEADING = 0.02;  // Proportional gain for heading
         final double MIN_POWER = 0.15;   // Minimum power to overcome friction
         final double SLOWDOWN_DIST = 12.0; // Start slowing down at 12 inches
-        
+
         // Anti-oscillation: scale down rotation when far from target position
         final double ROTATION_SCALE_DIST = 24.0; // Full rotation only within this distance
 
@@ -853,7 +853,7 @@ public class AutoBlueBackML extends LinearOpMode {
         while (opModeIsActive() && (getRuntime() - startTime) < timeoutSeconds && !targetReached) {
             // Update absolute position from odometry
             updateAbsoluteOdometry();
-            
+
             // Get current absolute position
             double currentXInches = absoluteFieldX;
             double currentYInches = absoluteFieldY;
@@ -873,7 +873,7 @@ public class AutoBlueBackML extends LinearOpMode {
             // Check if target reached (both position AND heading)
             boolean positionReached = distance < POSITION_TOLERANCE;
             boolean headingReached = Math.abs(headingError) < HEADING_TOLERANCE;
-            
+
             if (positionReached && headingReached) {
                 targetReached = true;
                 break;
@@ -883,7 +883,7 @@ public class AutoBlueBackML extends LinearOpMode {
             double driveX = 0.0;
             double driveY = 0.0;
             double rotationPower = 0.0;
-            
+
             // Only drive if position not yet reached
             if (!positionReached) {
                 // Calculate drive angle in field frame
@@ -925,10 +925,10 @@ public class AutoBlueBackML extends LinearOpMode {
                     // Linear interpolation between 20% and 100%
                     rotationScale = 0.2 + 0.8 * (1.0 - (distance / ROTATION_SCALE_DIST));
                 }
-                
+
                 rotationPower = headingError * KP_HEADING * rotationScale;
                 rotationPower = Range.clip(rotationPower, -maxSpeed * 0.5, maxSpeed * 0.5);
-                
+
                 // Apply minimum rotation power only when position is reached (pure rotation)
                 if (positionReached && Math.abs(rotationPower) < MIN_POWER && Math.abs(headingError) > HEADING_TOLERANCE) {
                     rotationPower = Math.signum(rotationPower) * MIN_POWER;
@@ -993,11 +993,11 @@ public class AutoBlueBackML extends LinearOpMode {
         if (!absoluteOdometryInitialized) {
             initializeAbsoluteOdometry(BLUE_DEFAULT_START_X * 12.0, BLUE_DEFAULT_START_Y * 12.0);
         }
-        
+
         double deltaX = targetXInches - absoluteFieldX;
         double deltaY = targetYInches - absoluteFieldY;
         double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        
+
         // Estimate ~15 inches per second at 0.5 speed, add 3 seconds buffer
         double timeout = Math.max(5.0, (distance / 15.0) + 3.0);
         return driveToPositionOdoWheels(targetXInches, targetYInches, 0.0, 0.5, timeout);
