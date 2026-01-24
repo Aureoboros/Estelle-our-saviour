@@ -231,7 +231,7 @@ public class TeleOpTourney extends LinearOpMode {
             }
             if (xPressed) {
                 launchBalls(1);
-            //    autoAimAndShoot();
+                //    autoAimAndShoot();
             }
 
             // ========== BACK BUTTON - RESET ODOMETRY ==========
@@ -515,7 +515,7 @@ public class TeleOpTourney extends LinearOpMode {
         limelight.pipelineSwitch(0);  // Pipeline 0 should be configured for AprilTag 3D in Limelight web interface
         limelight.setPollRateHz(100); // Set polling rate for responsive tracking
         limelight.start();
-        
+
         // Initialize robot orientation for 3D localization
         // This should be called periodically with IMU heading for MegaTag2
         limelight.updateRobotOrientation(0.0);
@@ -656,7 +656,7 @@ public class TeleOpTourney extends LinearOpMode {
     private double calculateDistanceFromLimelight(LLResultTypes.FiducialResult fiducial) {
         // Method 1: Use target area (requires calibration)
         double area = fiducial.getTargetArea();
-        
+
         // Method 2: Use TY (vertical angle) for more accurate distance
         // This uses the known height difference between camera and tag
         double ty = fiducial.getTargetYDegrees();
@@ -665,22 +665,22 @@ public class TeleOpTourney extends LinearOpMode {
         final double CAMERA_HEIGHT_MM = 330.0;  // Height of camera lens from ground
         final double CAMERA_ANGLE_DEG = 0.0;    // Camera tilt angle (0 = horizontal)
         final double TAG_HEIGHT_MM = 750.0;     // Height of AprilTag center from ground
-        
+
         // Calculate distance using trigonometry
         // distance = (tagHeight - cameraHeight) / tan(cameraAngle + ty)
         double angleToTargetRad = Math.toRadians(CAMERA_ANGLE_DEG + ty);
-        
+
         double distanceFromTY = 0.0;
         if (Math.abs(angleToTargetRad) > 0.01) {  // Avoid division by zero
             distanceFromTY = Math.abs((TAG_HEIGHT_MM - CAMERA_HEIGHT_MM) / Math.tan(angleToTargetRad));
         }
-        
+
         // Method 3: Use area-based estimation as fallback
         // Formula: distance = k / sqrt(area), where k is calibration constant
         // CALIBRATE: Measure area at known distance, then k = distance * sqrt(area)
         final double AREA_CALIBRATION_CONSTANT = 5000.0;  // CALIBRATE THIS
         double distanceFromArea = AREA_CALIBRATION_CONSTANT / Math.sqrt(Math.max(area, 0.0001));
-        
+
         // Use TY-based distance if valid, otherwise fall back to area
         double distance;
         if (distanceFromTY > 100.0 && distanceFromTY < 5000.0) {
@@ -692,10 +692,10 @@ public class TeleOpTourney extends LinearOpMode {
             distance = distanceFromArea;
             telemetry.addData("Distance Method", "Area-based: %.0f mm", distanceFromArea);
         }
-        
+
         telemetry.addData("TY Angle", "%.2f°", ty);
         telemetry.addData("Target Area", "%.4f", area);
-        
+
         return distance;
     }
 
@@ -754,7 +754,7 @@ public class TeleOpTourney extends LinearOpMode {
         final double SERVO_MIN = 0.0;           // Minimum servo position
         final double SERVO_MAX = 0.5;           // Maximum servo position for 180° rotation
         final double SERVO_CENTER = 0.25;       // Center position for turret (middle of 0.0-0.5)
-        
+
         // Proportional gain: 0.5 range / ~27° max TX = ~0.0185 per degree
         // Multiplied by 2.5 for faster/more responsive tracking
         final double BASE_GAIN = 0.0125;        // Base servo units per degree of TX (scaled for 0.5 range)
@@ -772,7 +772,7 @@ public class TeleOpTourney extends LinearOpMode {
         // TX positive = target is to the right = adjust servo position accordingly
         // Adjust sign based on your servo mounting direction
         double adjustment = Range.clip(-tx * PROPORTIONAL_GAIN, -MAX_STEP, MAX_STEP);
-        
+
         double currentPos = spinSpinServo.getPosition();
         double newPos = currentPos + adjustment;
 
@@ -782,7 +782,7 @@ public class TeleOpTourney extends LinearOpMode {
 
         telemetry.addData("Turret TX", "%.1f°", tx);
         telemetry.addData("Turret Adjustment", "%.4f (x%.1f)", adjustment, GAIN_MULTIPLIER);
-        telemetry.addData("Turret Position", "%.3f → %.3f (range: %.1f-%.1f)", 
+        telemetry.addData("Turret Position", "%.3f → %.3f (range: %.1f-%.1f)",
                 currentPos, newPos, SERVO_MIN, SERVO_MAX);
 
         sleep(300); // Allow turret to settle
@@ -822,7 +822,7 @@ public class TeleOpTourney extends LinearOpMode {
             sleep(1500);
             //while (spatulaServo.getPosition() != 1.0);
             // Close stopper
-            //stopServo.setPosition(1.0);
+            stopServo.setPosition(1.0);
             //sleep(200);
         }
     }
