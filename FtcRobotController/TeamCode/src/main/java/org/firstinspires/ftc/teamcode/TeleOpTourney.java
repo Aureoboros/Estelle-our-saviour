@@ -140,7 +140,16 @@ public class TeleOpTourney extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         initializeHardware();
-        detectInitialPosition();
+//        detectInitialPosition();
+        boolean found = false;
+        int count = 0;
+        double spinpos = 0.05;
+        do {
+            spinSpinServo.setPosition(spinpos);
+            sleep(100);
+            found = detectInitialPosition();
+            spinpos = spinpos + 0.05;
+        } while ((!found)&&(spinpos <=0.3));
 
 
         // Initialize gamepad state tracking
@@ -230,8 +239,8 @@ public class TeleOpTourney extends LinearOpMode {
                 }
             }
             if (xPressed) {
-                launchBalls(1);
-            //    autoAimAndShoot();
+            //    launchBalls(1);
+                autoAimAndShoot();
             }
 
             // ========== BACK BUTTON - RESET ODOMETRY ==========
@@ -560,7 +569,7 @@ public class TeleOpTourney extends LinearOpMode {
         telemetry.update();
     }
 
-    private void detectInitialPosition() {
+    private boolean detectInitialPosition() {
         telemetry.addLine("Detecting initial position...");
         telemetry.update();
 
@@ -591,6 +600,7 @@ public class TeleOpTourney extends LinearOpMode {
             }
             sleep(100);
         }
+        return positionDetected;
     }
 
     private void autoAimAndShoot() {
@@ -625,7 +635,7 @@ public class TeleOpTourney extends LinearOpMode {
                         sleep(1000); // Allow launcher to spin up
 
                         // Launch sequence
-                        launchBalls(3); // Launch 3 balls
+                        launchBalls(1); // Launch 3 balls
 
                         targetAcquired = true;
 
@@ -646,7 +656,7 @@ public class TeleOpTourney extends LinearOpMode {
             //setLauncherSpeed(MAX_MOTOR_RPM * 0.9);
             launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
             sleep(500);
-            launchBalls(3);
+            launchBalls(1);
         }
 
         // Stop launcher
@@ -663,7 +673,7 @@ public class TeleOpTourney extends LinearOpMode {
 
         // Camera mounting height and angle (CALIBRATE THESE FOR YOUR ROBOT)
         final double CAMERA_HEIGHT_MM = 330.0;  // Height of camera lens from ground
-        final double CAMERA_ANGLE_DEG = 0.0;    // Camera tilt angle (0 = horizontal)
+        final double CAMERA_ANGLE_DEG = 5.0;    // Camera tilt angle (positive = tilted up)
         final double TAG_HEIGHT_MM = 750.0;     // Height of AprilTag center from ground
         
         // Calculate distance using trigonometry
@@ -817,12 +827,12 @@ public class TeleOpTourney extends LinearOpMode {
             // Close stopper to stop other balls from going under the spatula
             stopServo.setPosition(0.5);
             //while (stopServo.getPosition() != 0.0);
-            sleep(1500);
+            sleep(1000);
             // Actuate spatula to push ball
             spatulaServo.setPosition(0.0);
             sleep(1000);
             spatulaServo.setPosition(1.0);
-            sleep(1500);
+            sleep(1000);
             //while (spatulaServo.getPosition() != 1.0);
             // Close stopper
             //stopServo.setPosition(1.0);

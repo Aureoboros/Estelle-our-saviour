@@ -408,7 +408,7 @@ public class AB_DR extends LinearOpMode {
         
         // Camera mounting height and angle (CALIBRATE THESE FOR YOUR ROBOT)
         final double CAMERA_HEIGHT_MM = 200.0;  // Height of camera lens from ground
-        final double CAMERA_ANGLE_DEG = 0.0;    // Camera tilt angle (0 = horizontal)
+        final double CAMERA_ANGLE_DEG = 5.0;    // Camera tilt angle (positive = tilted up)
         final double TAG_HEIGHT_MM = 150.0;     // Height of AprilTag center from ground
         
         // Calculate distance using trigonometry

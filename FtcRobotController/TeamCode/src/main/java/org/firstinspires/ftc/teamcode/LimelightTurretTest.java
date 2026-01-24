@@ -32,7 +32,7 @@ public class LimelightTurretTest extends LinearOpMode {
 
     // Distance calculation constants (CALIBRATE THESE FOR YOUR ROBOT)
     private static final double CAMERA_HEIGHT_MM = 200.0;  // Height of camera lens from ground
-    private static final double CAMERA_ANGLE_DEG = 0.0;    // Camera tilt angle (0 = horizontal)
+    private static final double CAMERA_ANGLE_DEG = 5.0;    // Camera tilt angle (positive = tilted up)
     private static final double TAG_HEIGHT_MM = 150.0;     // Height of AprilTag center from ground
     private static final double AREA_CALIBRATION_CONSTANT = 5000.0;  // Calibration constant for area-based distance
 
