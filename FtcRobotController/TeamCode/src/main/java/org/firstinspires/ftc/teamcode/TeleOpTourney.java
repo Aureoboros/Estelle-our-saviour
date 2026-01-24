@@ -176,9 +176,9 @@ public class TeleOpTourney extends LinearOpMode {
             currentGamepad2.copy(gamepad2);
 
             // ========== UPDATE ODOMETRY ==========
-            // updateDriveEncoderOdometry(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor, imu);
-            robotX = getXOdoInches() / 12;
-            robotY = getYOdoInches() / 12;
+            updateDriveEncoderOdometry(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor, imu);
+            //robotX = getXOdoInches() / 12;
+            //robotY = getYOdoInches() / 12;
             // ARATRIKA COME BACK TO THIS >:( also written by aratrika yeah
 
             // ========== RISING EDGE DETECTION ==========
@@ -944,8 +944,10 @@ public class TeleOpTourney extends LinearOpMode {
 
         while (opModeIsActive() && (getRuntime() - startTime) < timeout) {
             // Update robot position from odometry
-            robotX = getXOdoInches() / 12;
-            robotY = getYOdoInches() / 12;
+            //robotX = getXOdoInches() / 12;
+            //robotY = getYOdoInches() / 12;
+            updateDriveEncoderOdometry(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor, imu);
+
 
             double deltaX = targetX - robotX;
             double deltaY = targetY - robotY;
