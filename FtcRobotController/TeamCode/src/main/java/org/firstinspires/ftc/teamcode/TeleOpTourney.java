@@ -873,23 +873,77 @@ public class TeleOpTourney extends LinearOpMode {
     }
 
 
+    /**
+     * Drives the robot to a specific position on the field using wheel encoders.
+     * Uses a TWO-PHASE approach for large heading changes (>30°) to prevent oscillation:
+     * - Phase 1: Drive to target position (no heading change)
+     * - Phase 2: Rotate in place to target heading
+     *
+     * For small heading changes (≤30°), uses single-phase combined movement.
+     *
+     * @param targetX Target X position in FEET from field center
+     * @param targetY Target Y position in FEET from field center
+     * @param targetHeading Target heading in RADIANS
+     */
     private void driveToPosition(double targetX, double targetY, double targetHeading) {
-        // Validate target is within FTC 2026 field bounds
         targetX = Range.clip(targetX, FIELD_MIN_FEET, FIELD_MAX_FEET);
         targetY = Range.clip(targetY, FIELD_MIN_FEET, FIELD_MAX_FEET);
 
-        double startTime = getRuntime();
-        double timeout = 8.0;  // 8 second timeout for longer distances
+        // Two-phase threshold: heading changes larger than this use two-phase movement
+        final double LARGE_HEADING_THRESHOLD_RAD = Math.toRadians(30.0);
 
-        // Initialize odometry if not already done
         if (!odometryInitialized) {
-            // resetOdometry();
             resetOdometryPods();
+            odometryInitialized = true;
         }
+
+        // Get current heading to determine if we need two-phase movement
+        double currentHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+        double initialHeadingError = targetHeading - currentHeading;
+        while (initialHeadingError > Math.PI) initialHeadingError -= 2 * Math.PI;
+        while (initialHeadingError < -Math.PI) initialHeadingError += 2 * Math.PI;
+
+        boolean useTwoPhase = Math.abs(initialHeadingError) > LARGE_HEADING_THRESHOLD_RAD;
+
+        if (useTwoPhase) {
+            // TWO-PHASE MOVEMENT: First drive to position, then rotate
+            telemetry.addLine("Using TWO-PHASE movement (large heading change)");
+            telemetry.addData("Heading change", "%.1f° > 30° threshold", 
+                    Math.toDegrees(Math.abs(initialHeadingError)));
+            telemetry.update();
+
+            // Phase 1: Drive to position without heading change (70% of timeout)
+            driveToPositionPhase(targetX, targetY, currentHeading, 5.6, true, "PHASE 1: DRIVING");
+
+            // Phase 2: Rotate in place to target heading (30% of timeout)
+            driveToPositionPhase(targetX, targetY, targetHeading, 2.4, false, "PHASE 2: ROTATING");
+
+        } else {
+            // SINGLE-PHASE MOVEMENT: Combined drive and rotate
+            driveToPositionPhase(targetX, targetY, targetHeading, 8.0, false, "SINGLE-PHASE");
+        }
+
+        stopDriveMotors();
+        sleep(100);
+    }
+
+    /**
+     * Internal helper method that executes a single phase of movement for driveToPosition.
+     * Can be configured for position-only (Phase 1) or combined position+heading.
+     *
+     * @param targetX Target X position in FEET
+     * @param targetY Target Y position in FEET
+     * @param targetHeading Target heading in RADIANS
+     * @param timeout Maximum time for this phase
+     * @param positionOnlyPhase If true, skip heading correction (Phase 1)
+     * @param phaseName Name for telemetry display
+     */
+    private void driveToPositionPhase(double targetX, double targetY, double targetHeading,
+                                       double timeout, boolean positionOnlyPhase, String phaseName) {
+        double startTime = getRuntime();
 
         while (opModeIsActive() && (getRuntime() - startTime) < timeout) {
             // Update robot position from odometry
-            // updateOdometryPosition();
             robotX = getXOdoInches() / 12;
             robotY = getYOdoInches() / 12;
 
@@ -897,50 +951,79 @@ public class TeleOpTourney extends LinearOpMode {
             double deltaY = targetY - robotY;
             double distanceToTarget = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-            // Check if reached target
-            if (distanceToTarget * 12 < POSITION_TOLERANCE_INCHES) {
-                stopDriveMotors();
-                break;
-            }
-
-            // Calculate angle to target (field-centric)
-            double angleToTarget = Math.atan2(deltaX, deltaY);
-
-            // Speed control with slowdown near target
-            double speed = AUTO_MAX_SPEED;
-            if (distanceToTarget < SLOWDOWN_DISTANCE_FEET) {
-                double slowdownRatio = distanceToTarget / SLOWDOWN_DISTANCE_FEET;
-                speed = AUTO_MIN_SPEED + (AUTO_MAX_SPEED - AUTO_MIN_SPEED) * slowdownRatio;
-            }
-
-            // Get current heading from IMU
             double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
             robotHeading = heading;
 
-            // Convert to robot frame
-            double x = Math.sin(angleToTarget - heading) * speed;
-            double y = Math.cos(angleToTarget - heading) * speed;
-
-            // Calculate heading correction
+            // Calculate heading error
             double headingError = targetHeading - heading;
             while (headingError > Math.PI) headingError -= 2 * Math.PI;
             while (headingError < -Math.PI) headingError += 2 * Math.PI;
-            double rx = headingError * 0.5;  // Proportional heading control
 
-            // Drive
+            boolean positionReached = distanceToTarget * 12 < POSITION_TOLERANCE_INCHES;
+            boolean headingReached = Math.abs(headingError) < Math.toRadians(ANGLE_TOLERANCE_DEGREES);
+
+            // Check exit conditions based on phase type
+            if (positionOnlyPhase) {
+                // Phase 1: Exit when position is reached
+                if (positionReached) {
+                    stopDriveMotors();
+                    break;
+                }
+            } else {
+                // Phase 2 or Single-phase: Exit when both position AND heading are reached
+                if (positionReached && headingReached) {
+                    stopDriveMotors();
+                    break;
+                }
+            }
+
+            // Calculate drive powers
+            double x = 0.0;
+            double y = 0.0;
+            double rx = 0.0;
+
+            // Only drive if position not yet reached
+            if (!positionReached) {
+                double angleToTarget = Math.atan2(deltaX, deltaY);
+                double speed = AUTO_MAX_SPEED;
+
+                if (distanceToTarget < SLOWDOWN_DISTANCE_FEET) {
+                    double slowdownRatio = distanceToTarget / SLOWDOWN_DISTANCE_FEET;
+                    speed = AUTO_MIN_SPEED + (AUTO_MAX_SPEED - AUTO_MIN_SPEED) * slowdownRatio;
+                }
+
+                x = Math.sin(angleToTarget - heading) * speed;
+                y = Math.cos(angleToTarget - heading) * speed;
+            }
+
+            // Heading correction (skip in position-only phase)
+            if (!positionOnlyPhase && !headingReached) {
+                // Scale down rotation when far from position to prevent oscillation (single-phase only)
+                double rotationScale = 1.0;
+                if (!positionReached && distanceToTarget > 2.0) { // 2 feet = ROTATION_SCALE_DIST equivalent
+                    rotationScale = 0.2;
+                } else if (!positionReached && distanceToTarget > POSITION_TOLERANCE_INCHES / 12.0) {
+                    rotationScale = 0.2 + 0.8 * (1.0 - (distanceToTarget / 2.0));
+                }
+
+                rx = headingError * 0.5 * rotationScale;
+
+                // Apply minimum rotation power when doing pure rotation (position reached)
+                if (positionReached && Math.abs(rx) < 0.1 && !headingReached) {
+                    rx = Math.signum(rx) * 0.1;
+                }
+            }
+
             driveFieldCentric(x, y, rx, heading);
 
-            // Telemetry
-            telemetry.addData("Target", "X: %.2f, Y: %.2f", targetX, targetY);
-            telemetry.addData("Current", "X: %.2f, Y: %.2f", robotX, robotY);
+            telemetry.addLine("--- " + phaseName + " ---");
+            telemetry.addData("Target", "X: %.2f, Y: %.2f, H: %.1f°", targetX, targetY, Math.toDegrees(targetHeading));
+            telemetry.addData("Current", "X: %.2f, Y: %.2f, H: %.1f°", robotX, robotY, Math.toDegrees(heading));
             telemetry.addData("Distance", "%.2f ft", distanceToTarget);
-            telemetry.addData("Speed", "%.2f", speed);
-            telemetry.addData("Heading", "%.1f°", Math.toDegrees(heading));
+            telemetry.addData("Heading Error", "%.1f°", Math.toDegrees(headingError));
+            telemetry.addData("Time remaining", "%.1f s", timeout - (getRuntime() - startTime));
             telemetry.update();
         }
-
-        stopDriveMotors();
-        sleep(100);  // Brief settle time
     }
 
     private void resetOdometry() {
