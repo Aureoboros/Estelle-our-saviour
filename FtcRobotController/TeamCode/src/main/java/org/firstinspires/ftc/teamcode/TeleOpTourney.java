@@ -137,6 +137,8 @@ public class TeleOpTourney extends LinearOpMode {
 
     private int togglemotorpower = 1; // Back toggles launch motor power between high & low, default high for shooting from far
 
+    private int tagid = 24; //red by default
+
     @Override
     public void runOpMode() throws InterruptedException {
         initializeHardware();
@@ -225,18 +227,27 @@ public class TeleOpTourney extends LinearOpMode {
 
             // ========== A/B/X BUTTONS - SPEED PRESETS ==========
             if (aPressed) {
-                driveToPosition(0,0,0);
+                //driveToPosition(0,0,0);
                 // driveToPositionOdoWheels(0, 0);
+                //shoot position 0, -4
+                driveToPosition(0, -4, 0);
             }
             if (bPressed) {
-                if (togglestopper == 1) {
-                    stopServo.setPosition(0.5);
-                    togglestopper = 0;
+                //Park position
+                if(tagid == 20) {
+                    driveToPosition(3, -3, 0);
                 }
                 else {
-                    stopServo.setPosition(1.0);
-                    togglestopper = 1;
+                    driveToPosition(-3,-3, 0);
                 }
+//                if (togglestopper == 1) {
+//                    stopServo.setPosition(0.5);
+//                    togglestopper = 0;
+//                }
+//                else {
+//                    stopServo.setPosition(1.0);
+//                    togglestopper = 1;
+//                }
             }
             if (xPressed) {
             //    launchBalls(1);
@@ -326,22 +337,34 @@ public class TeleOpTourney extends LinearOpMode {
                 rx = currentGamepad1.right_trigger - currentGamepad1.left_trigger;
 
                 // DPAD precision control (overrides joystick)
+//                if (currentGamepad1.dpad_up) {
+//                    y = -0.3;  // Forward
+//                    x = 0;
+//                    rx = 0;
+//                } else if (currentGamepad1.dpad_down) {
+//                    y = 0.3;  // Backward
+//                    x = 0;
+//                    rx = 0;
+//                } else if (currentGamepad1.dpad_left) {
+//                    y = 0;
+//                    x = -0.3;  // Strafe left
+//                    rx = 0;
+//                } else if (currentGamepad1.dpad_right) {
+//                    y = 0;
+//                    x = 0.3;  // Strafe right
+//                    rx = 0;
+//                }
+                if (currentGamepad1.dpad_left) {
+                    tagid = 20;
+                }
+                else if (currentGamepad1.dpad_right) {
+                    tagid = 24;
+                }
                 if (currentGamepad1.dpad_up) {
-                    y = -0.3;  // Forward
-                    x = 0;
-                    rx = 0;
-                } else if (currentGamepad1.dpad_down) {
-                    y = 0.3;  // Backward
-                    x = 0;
-                    rx = 0;
-                } else if (currentGamepad1.dpad_left) {
-                    y = 0;
-                    x = -0.3;  // Strafe left
-                    rx = 0;
-                } else if (currentGamepad1.dpad_right) {
-                    y = 0;
-                    x = 0.3;  // Strafe right
-                    rx = 0;
+                    launchMotorPower += 0.05;
+                }
+                else if (currentGamepad1.dpad_down) {
+                    launchMotorPower -= 0.05;
                 }
 
                 maxDrivePower = GAMEPAD1_MAX_POWER;
@@ -353,22 +376,34 @@ public class TeleOpTourney extends LinearOpMode {
                 rx = currentGamepad2.right_trigger - currentGamepad2.left_trigger;
 
                 // DPAD precision control (overrides joystick)
-                if (currentGamepad2.dpad_up) {
-                    y = -0.3;  // Forward
-                    x = 0;
-                    rx = 0;
-                } else if (currentGamepad2.dpad_down) {
-                    y = 0.3;  // Backward
-                    x = 0;
-                    rx = 0;
-                } else if (currentGamepad2.dpad_left) {
-                    y = 0;
-                    x = -0.3;  // Strafe left
-                    rx = 0;
-                } else if (currentGamepad2.dpad_right) {
-                    y = 0;
-                    x = 0.3;  // Strafe right
-                    rx = 0;
+//                if (currentGamepad2.dpad_up) {
+//                    y = -0.3;  // Forward
+//                    x = 0;
+//                    rx = 0;
+//                } else if (currentGamepad2.dpad_down) {
+//                    y = 0.3;  // Backward
+//                    x = 0;
+//                    rx = 0;
+//                } else if (currentGamepad2.dpad_left) {
+//                    y = 0;
+//                    x = -0.3;  // Strafe left
+//                    rx = 0;
+//                } else if (currentGamepad2.dpad_right) {
+//                    y = 0;
+//                    x = 0.3;  // Strafe right
+//                    rx = 0;
+//                }
+                if (currentGamepad1.dpad_left) {
+                    tagid = 20;
+                }
+                else if (currentGamepad1.dpad_right) {
+                    tagid = 24;
+                }
+                if (currentGamepad1.dpad_up) {
+                    launchMotorPower += 0.05;
+                }
+                else if (currentGamepad1.dpad_down) {
+                    launchMotorPower -= 0.05;
                 }
 
                 maxDrivePower = GAMEPAD2_MAX_POWER;
@@ -616,10 +651,10 @@ public class TeleOpTourney extends LinearOpMode {
 
             if (result != null && result.isValid() && result.getFiducialResults().size() > 0) {
                 for (LLResultTypes.FiducialResult fiducial : result.getFiducialResults()) {
-                    if (fiducial.getFiducialId() == TARGET_APRILTAG_ID) {
+                    if (fiducial.getFiducialId() == tagid) {
                         // Calculate distance using both methods
                         double limelightDistance = calculateDistanceFromLimelight(fiducial);
-                        double odoDistance = confirmPositionWithOdometry(TARGET_APRILTAG_ID);
+                        double odoDistance = confirmPositionWithOdometry(tagid);
                         double finalDistance = (limelightDistance + odoDistance) / 2.0;
 
                         // Calculate required launch velocity and RPM
@@ -631,7 +666,7 @@ public class TeleOpTourney extends LinearOpMode {
 
                         // Set launcher speed
                         //setLauncherSpeed(requiredRPM);
-                        launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
+                        launchMotor.setPower(launchMotorPower);
                         sleep(1000); // Allow launcher to spin up
 
                         // Launch sequence
@@ -639,7 +674,7 @@ public class TeleOpTourney extends LinearOpMode {
 
                         targetAcquired = true;
 
-                        telemetry.addData("Target Acquired", "Tag %d (RED)", TARGET_APRILTAG_ID);
+                        telemetry.addData("Target Acquired", "Tag %d ", tagid);
                         telemetry.addData("Distance (mm)", "%.0f", finalDistance);
                         telemetry.addData("Required RPM", "%.0f", requiredRPM);
                         telemetry.update();
@@ -654,13 +689,13 @@ public class TeleOpTourney extends LinearOpMode {
             telemetry.addLine("⚠ Target not found - shooting with default settings");
             telemetry.update();
             //setLauncherSpeed(MAX_MOTOR_RPM * 0.9);
-            launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
+            launchMotor.setPower(launchMotorPower);
             sleep(500);
             launchBalls(1);
         }
 
         // Stop launcher
-        launchMotor.setPower(0);
+        //launchMotor.setPower(0);
     }
 
     private double calculateDistanceFromLimelight(LLResultTypes.FiducialResult fiducial) {
