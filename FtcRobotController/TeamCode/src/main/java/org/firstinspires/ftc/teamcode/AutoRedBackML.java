@@ -233,7 +233,7 @@ public class AutoRedBackML extends LinearOpMode {
 
         // Set motor directions
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
-        backRightMotor.setDirection(DcMotor.Direction.REVERSE);
+        frontRightMotor.setDirection(DcMotor.Direction.REVERSE);
 
         // Reset encoders
         xodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
