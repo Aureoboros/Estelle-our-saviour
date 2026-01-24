@@ -105,7 +105,15 @@ public class AutoRedBackML extends LinearOpMode {
         telemetry.addLine();
 
         // Try to detect initial position using Limelight
-        detectInitialPosition();
+        boolean found = false;
+        int count = 0;
+        double spinpos = 0.05;
+        do {
+            spinSpinServo.setPosition(spinpos);
+            sleep(100);
+            found = detectInitialPosition();
+            spinpos = spinpos + 0.05;
+        } while ((!found)&&(spinpos <=0.3));
 
         // Fallback if no tag detected
         if (!positionDetected) {
@@ -120,6 +128,11 @@ public class AutoRedBackML extends LinearOpMode {
 
         waitForStart();
         if (isStopRequested()) return;
+
+        // Initialize drive encoder odometry reference values AFTER position detection
+        // This ensures updateOdometryPosition() calculates deltas from current position,
+        // not from encoder position 0, which would corrupt the detected robotX/robotY values
+        initializeDriveEncoderOdometry();
 
         // ========== SEQUENCE START ==========
 
@@ -233,27 +246,27 @@ public class AutoRedBackML extends LinearOpMode {
         spatulaServo.setPosition(0.0); // Down
     }
 
-    private void detectInitialPosition() {
+    private boolean detectInitialPosition() {
         telemetry.addLine("Detecting initial position...");
         telemetry.update();
-        
+
         for (int i = 0; i < 30 && !positionDetected; i++) {
             LLResult result = limelight.getLatestResult();
-            
+
             if (result != null && result.isValid() && result.getFiducialResults().size() > 0) {
                 for (LLResultTypes.FiducialResult fiducial : result.getFiducialResults()) {
                     int tagId = fiducial.getFiducialId();
-                    
+
                     // Use any visible tag to establish position
                     if (tagId >= 20 && tagId <= 24) {
                         double distance = calculateDistanceFromLimelight(fiducial);
                         double angle = Math.toRadians(fiducial.getTargetXDegrees());
-                        
+
                         // Calculate robot position relative to tag
                         double[] tagPos = TAG_POSITIONS[tagId - 20];
                         robotX = (tagPos[0] - distance * Math.sin(angle)) / 304.8; // mm to feet
                         robotY = (tagPos[1] - distance * Math.cos(angle)) / 304.8;
-                        
+
                         positionDetected = true;
                         telemetry.addData("Position detected via Tag", tagId);
                         telemetry.addData("Robot Position", "X: %.2f ft, Y: %.2f ft", robotX, robotY);
@@ -264,19 +277,20 @@ public class AutoRedBackML extends LinearOpMode {
             }
             sleep(100);
         }
+        return positionDetected;
     }
 
     private void autoAimAndShoot() {
         telemetry.addLine("Auto-aiming at RED target (Tag 24)...");
         telemetry.update();
-        
+
         boolean targetAcquired = false;
         double timeout = 3.0; // 3 second timeout
         double startTime = getRuntime();
-        
+
         while (opModeIsActive() && !targetAcquired && (getRuntime() - startTime) < timeout) {
             LLResult result = limelight.getLatestResult();
-            
+
             if (result != null && result.isValid() && result.getFiducialResults().size() > 0) {
                 for (LLResultTypes.FiducialResult fiducial : result.getFiducialResults()) {
                     if (fiducial.getFiducialId() == TARGET_APRILTAG_ID) {
@@ -284,23 +298,23 @@ public class AutoRedBackML extends LinearOpMode {
                         double limelightDistance = calculateDistanceFromLimelight(fiducial);
                         double odoDistance = confirmPositionWithOdometry(TARGET_APRILTAG_ID);
                         double finalDistance = (limelightDistance + odoDistance) / 2.0;
-                        
+
                         // Calculate required launch velocity and RPM
                         double requiredVelocity = calculateLaunchVelocity(finalDistance);
                         double requiredRPM = velocityToRPM(requiredVelocity);
-                        
-                        // Aim turret
+
+                        // Aim turret using proportional control
                         aimTurretAtTag(fiducial);
-                        
+
                         // Set launcher speed
-                        setLauncherSpeed(requiredRPM);
-                        sleep(500); // Allow launcher to spin up
-                        
+                        launchMotor.setPower(LAUNCH_MOTOR_POWER);
+                        sleep(1000); // Allow launcher to spin up
+
                         // Launch sequence
                         launchBalls(3); // Launch 3 balls
-                        
+
                         targetAcquired = true;
-                        
+
                         telemetry.addData("Target Acquired", "Tag %d (RED)", TARGET_APRILTAG_ID);
                         telemetry.addData("Distance (mm)", "%.0f", finalDistance);
                         telemetry.addData("Required RPM", "%.0f", requiredRPM);
@@ -311,17 +325,16 @@ public class AutoRedBackML extends LinearOpMode {
             }
             sleep(50);
         }
-        
+
         if (!targetAcquired) {
             telemetry.addLine("⚠ Target not found - shooting with default settings");
             telemetry.update();
-            setLauncherSpeed(MAX_MOTOR_RPM * 0.7);
+            launchMotor.setPower(LAUNCH_MOTOR_POWER);
             sleep(500);
             launchBalls(3);
         }
-        
-        // Stop launcher
-        launchMotor.setPower(0);
+
+        // Don't stop launcher - keep spinning for next shot
     }
 
     private double calculateDistanceFromLimelight(LLResultTypes.FiducialResult fiducial) {
@@ -468,6 +481,26 @@ public class AutoRedBackML extends LinearOpMode {
         odometryInitialized = true;
     }
 
+    /**
+     * Initializes drive encoder odometry by capturing current encoder positions as reference.
+     * MUST be called after detectInitialPosition() and before the main autonomous sequence starts.
+     * This ensures that updateOdometryPosition() calculates deltas from the current position,
+     * not from encoder position 0, which would corrupt the detected robotX/robotY values.
+     */
+    private void initializeDriveEncoderOdometry() {
+        lastLeftEncoderPos = frontLeftMotor.getCurrentPosition();
+        lastRightEncoderPos = frontRightMotor.getCurrentPosition();
+        lastStrafeEncoderPos = backLeftMotor.getCurrentPosition();
+        
+        telemetry.addLine("Drive encoder odometry initialized");
+        telemetry.addData("Initial robotX", "%.2f ft", robotX);
+        telemetry.addData("Initial robotY", "%.2f ft", robotY);
+        telemetry.addData("FL Encoder Reference", lastLeftEncoderPos);
+        telemetry.addData("FR Encoder Reference", lastRightEncoderPos);
+        telemetry.addData("BL Encoder Reference", lastStrafeEncoderPos);
+        telemetry.update();
+    }
+
     private void updateOdometryPosition() {
         int leftPos = frontLeftMotor.getCurrentPosition();
         int rightPos = frontRightMotor.getCurrentPosition();
@@ -547,23 +580,56 @@ public class AutoRedBackML extends LinearOpMode {
     }
 
     private void intakeGateBalls() {
-        // Mirrored for RED alliance
-        double angle = Math.toRadians(-60);  // Opposite direction
-        turnToAngle(angle);
-        driveToPosition(2.0, -1.0, angle);     // Mirrored coordinates
-        driveToPosition(5.0, -1.0, angle);    // Mirrored coordinates
+        // Gate intake sequence for Red Alliance (MIRRORED from Blue)
+        // The gate is located at approximately (+5, -1) feet from field center
+        // Robot approaches at -60° angle to align with gate opening (mirrored)
+        
+        final double GATE_APPROACH_X = 2.0;   // Approach position X (feet) - mirrored from Blue
+        final double GATE_APPROACH_Y = -1.0;  // Approach position Y (feet)
+        final double GATE_INTAKE_X = 5.0;     // Gate intake position X (feet) - mirrored from Blue
+        final double GATE_INTAKE_Y = -1.0;    // Gate intake position Y (feet)
+        final double GATE_ANGLE_DEG = -60.0;  // Approach angle in degrees (negative = mirrored)
+        
+        double angleRad = Math.toRadians(GATE_ANGLE_DEG);
+        
+        // Step 1: Turn to face gate approach angle
+        turnToAngle(angleRad);
+        
+        // Step 2: Drive to approach position (maintain heading)
+        driveToPosition(GATE_APPROACH_X, GATE_APPROACH_Y, angleRad);
+        
+        // Step 3: Start intake motor before approaching gate
         intakeMotor.setPower(INTAKE_POWER);
+        
+        // Step 4: Drive into gate to collect balls
+        driveToPosition(GATE_INTAKE_X, GATE_INTAKE_Y, angleRad);
+        
+        // Step 5: Wait for intake to collect balls
         sleep(4000); // 4 second intake
+        
+        // Step 6: Stop intake
         intakeMotor.setPower(0);
+        
+        // Step 7: Back out to approach position
+        driveToPosition(GATE_APPROACH_X, GATE_APPROACH_Y, angleRad);
+        
+        // Step 8: Turn back to face forward (0 degrees)
+        turnToAngle(0);
     }
 
     private void intakeSpikeBalls(double spike_x, double spike_y, double angle) {
-        driveToPosition(spike_x, spike_y, 0);
-        turnToAngle(-Math.toRadians(angle));
+        // spike_x and spike_y are already in INCHES (converted at call site)
+        // Convert back to FEET for driveToPosition() which expects feet
+        double spike_x_feet = spike_x / 12.0;
+        double spike_y_feet = spike_y / 12.0;
+        // angle is in DEGREES
+        driveToPosition(spike_x_feet, spike_y_feet, 0);
+        turnToAngle(Math.toRadians(-angle)); // turnToAngle expects radians
         intakeMotor.setPower(INTAKE_POWER);
-        driveToPosition(spike_x + 2.0, spike_y, -Math.toRadians(angle));  // +2.0 instead of -2.0
+        // Move 24 inches (2 feet) in the +X direction for intake (Red side - mirrored from Blue)
+        driveToPosition(spike_x_feet + 2.0, spike_y_feet, Math.toRadians(-angle)); // 2.0 feet = 24 inches
         intakeMotor.setPower(0);
-        driveToPosition(spike_x, spike_y, 0);
+        driveToPosition(spike_x_feet, spike_y_feet, 0);
     }
 
     private void turnToAngle(double targetAngle) {

@@ -169,6 +169,12 @@ public class TeleOpTourney extends LinearOpMode {
 
         waitForStart();
         if (isStopRequested()) return;
+        
+        // Initialize drive encoder odometry reference values AFTER position detection
+        // This ensures updateDriveEncoderOdometry() calculates deltas from current position
+        // rather than accumulating from encoder position 0
+        initializeDriveEncoderOdometry();
+        
         launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
         intakeMotor.setPower(INTAKE_POWER);
         stopServo.setPosition(0.5);
@@ -878,6 +884,28 @@ public class TeleOpTourney extends LinearOpMode {
         }
     }
 
+    /**
+     * Initializes drive encoder odometry by capturing current encoder positions as reference.
+     * MUST be called after detectInitialPosition() and before the main loop starts.
+     * This ensures that updateDriveEncoderOdometry() calculates deltas from the current position,
+     * not from encoder position 0, which would corrupt the detected robotX/robotY values.
+     */
+    private void initializeDriveEncoderOdometry() {
+        lastFLEncoder = frontLeftMotor.getCurrentPosition();
+        lastBLEncoder = backLeftMotor.getCurrentPosition();
+        lastFREncoder = frontRightMotor.getCurrentPosition();
+        lastBREncoder = backRightMotor.getCurrentPosition();
+        
+        telemetry.addLine("Drive encoder odometry initialized");
+        telemetry.addData("Initial robotX", "%.2f ft", robotX);
+        telemetry.addData("Initial robotY", "%.2f ft", robotY);
+        telemetry.addData("FL Encoder Reference", lastFLEncoder);
+        telemetry.addData("BL Encoder Reference", lastBLEncoder);
+        telemetry.addData("FR Encoder Reference", lastFREncoder);
+        telemetry.addData("BR Encoder Reference", lastBREncoder);
+        telemetry.update();
+    }
+
     private void updateDriveEncoderOdometry(DcMotor fl, DcMotor bl, DcMotor fr, DcMotor br, IMU imu) {
         int currentFL = fl.getCurrentPosition();
         int currentBL = bl.getCurrentPosition();
@@ -981,10 +1009,9 @@ public class TeleOpTourney extends LinearOpMode {
         double startTime = getRuntime();
 
         while (opModeIsActive() && (getRuntime() - startTime) < timeout) {
-            // Update robot position from odometry
-            //robotX = getXOdoInches() / 12;
-            //robotY = getYOdoInches() / 12;
+            // Update robot position using wheel encoder odometry (not xOdo/yOdo pods)
             updateDriveEncoderOdometry(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor, imu);
+            // robotX and robotY are updated inside updateDriveEncoderOdometry()
 
 
             double deltaX = targetX - robotX;

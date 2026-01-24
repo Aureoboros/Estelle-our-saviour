@@ -107,10 +107,18 @@ public class AB_DR extends LinearOpMode {
         telemetry.addLine();
 
         // Try to detect initial position using Limelight
-        detectInitialPosition();
+        boolean found = false;
+        int count = 0;
+        double spinpos = 0.05;
+        do {
+            spinSpinServo.setPosition(spinpos);
+            sleep(100);
+            found = detectInitialPosition();
+            spinpos = spinpos + 0.05;
+        } while ((!found)&&(spinpos <=0.3));
 
         // Fallback if no tag detected
-        if (!positionDetected) {
+        if (!found) {
             robotX = BLUE_DEFAULT_START_X;
             robotY = BLUE_DEFAULT_START_Y;
             telemetry.addLine("⚠ WARNING: Could not detect position!");
@@ -122,6 +130,11 @@ public class AB_DR extends LinearOpMode {
 
         waitForStart();
         if (isStopRequested()) return;
+
+        // Initialize drive encoder odometry reference values AFTER position detection
+        // This ensures updateOdometryPosition() calculates deltas from current position,
+        // not from encoder position 0, which would corrupt the detected robotX/robotY values
+        initializeDriveEncoderOdometry();
 
         // Initialize absolute odometry with robot's starting position
         // This ensures odo wheels know the proper field position from the start
@@ -262,51 +275,21 @@ public class AB_DR extends LinearOpMode {
         spatulaServo.setPosition(0.0); // Down
     }
 
-    private void detectInitialPosition() {
+    private boolean detectInitialPosition() {
         telemetry.addLine("Detecting initial position...");
         telemetry.update();
 
         for (int i = 0; i < 30 && !positionDetected; i++) {
             LLResult result = limelight.getLatestResult();
 
-            // Debug: Show raw Limelight data
-            telemetry.addLine("--- Limelight Raw Data ---");
-            telemetry.addData("Attempt", "%d/30", i + 1);
-            telemetry.addData("Limelight Connected", limelight.isConnected());
-            telemetry.addData("Limelight Running", limelight.isRunning());
-
-            if (result == null) {
-                telemetry.addData("Result", "NULL - No data from Limelight");
-                telemetry.update();
-                sleep(100);
-                continue;
-            }
-
-            telemetry.addData("Result Valid", result.isValid());
-            telemetry.addData("Pipeline Index", result.getPipelineIndex());
-            telemetry.addData("Timestamp", "%.3f", result.getTimestamp());
-            telemetry.addData("Targeting Latency", "%.1f ms", result.getTargetingLatency());
-
-            // Show fiducial (AprilTag) results
-            int fiducialCount = result.getFiducialResults().size();
-            telemetry.addData("AprilTags Detected", fiducialCount);
-
-            if (result.isValid() && fiducialCount > 0) {
+            if (result != null && result.isValid() && result.getFiducialResults().size() > 0) {
                 for (LLResultTypes.FiducialResult fiducial : result.getFiducialResults()) {
                     int tagId = fiducial.getFiducialId();
-
-                    telemetry.addLine();
-                    telemetry.addData("Tag ID", tagId);
-                    telemetry.addData("TX (horizontal offset)", "%.2f°", fiducial.getTargetXDegrees());
-                    telemetry.addData("TY (vertical offset)", "%.2f°", fiducial.getTargetYDegrees());
-                    telemetry.addData("Target Area", "%.4f", fiducial.getTargetArea());
 
                     // Use any visible tag to establish position
                     if (tagId >= 20 && tagId <= 24) {
                         double distance = calculateDistanceFromLimelight(fiducial);
                         double angle = Math.toRadians(fiducial.getTargetXDegrees());
-
-                        telemetry.addData("Calculated Distance", "%.1f mm", distance);
 
                         // Calculate robot position relative to tag
                         double[] tagPos = TAG_POSITIONS[tagId - 20];
@@ -314,34 +297,20 @@ public class AB_DR extends LinearOpMode {
                         robotY = (tagPos[1] - distance * Math.cos(angle)) / 304.8;
 
                         positionDetected = true;
-                        telemetry.addLine();
-                        telemetry.addData("✓ Position Detected via Tag", tagId);
+                        telemetry.addData("Position detected via Tag", tagId);
                         telemetry.addData("Robot Position", "X: %.2f ft, Y: %.2f ft", robotX, robotY);
                         telemetry.update();
-                        sleep(1000); // Show result for 1 second
                         break;
                     }
                 }
-            } else {
-                telemetry.addLine();
-                telemetry.addData("Status", "No valid AprilTags in view");
             }
-
-            telemetry.update();
             sleep(100);
         }
-
-        if (!positionDetected) {
-            telemetry.addLine("--- Position Detection Failed ---");
-            telemetry.addData("Limelight Connected", limelight.isConnected());
-            telemetry.addData("Limelight Running", limelight.isRunning());
-            telemetry.addLine("Check: Camera view, AprilTag visibility, Pipeline settings");
-            telemetry.update();
-        }
+        return positionDetected;
     }
 
     private void autoAimAndShoot() {
-        telemetry.addLine("Auto-aiming at target...");
+        telemetry.addLine("Auto-aiming at BLUE target (Tag 20)...");
         telemetry.update();
 
         boolean targetAcquired = false;
@@ -363,19 +332,19 @@ public class AB_DR extends LinearOpMode {
                         double requiredVelocity = calculateLaunchVelocity(finalDistance);
                         double requiredRPM = velocityToRPM(requiredVelocity);
 
-                        // Aim turret
+                        // Aim turret using proportional control
                         aimTurretAtTag(fiducial);
 
                         // Set launcher speed
-                        setLauncherSpeed(requiredRPM);
-                        sleep(500); // Allow launcher to spin up
+                        launchMotor.setPower(LAUNCH_MOTOR_POWER);
+                        sleep(1000); // Allow launcher to spin up
 
                         // Launch sequence
                         launchBalls(3); // Launch 3 balls
 
                         targetAcquired = true;
 
-                        telemetry.addData("Target Acquired", "Tag %d", TARGET_APRILTAG_ID);
+                        telemetry.addData("Target Acquired", "Tag %d (BLUE)", TARGET_APRILTAG_ID);
                         telemetry.addData("Distance (mm)", "%.0f", finalDistance);
                         telemetry.addData("Required RPM", "%.0f", requiredRPM);
                         telemetry.update();
@@ -389,13 +358,12 @@ public class AB_DR extends LinearOpMode {
         if (!targetAcquired) {
             telemetry.addLine("⚠ Target not found - shooting with default settings");
             telemetry.update();
-            setLauncherSpeed(MAX_MOTOR_RPM * 0.7);
+            launchMotor.setPower(LAUNCH_MOTOR_POWER);
             sleep(500);
             launchBalls(3);
         }
 
-        // Stop launcher
-        launchMotor.setPower(0);
+        // Don't stop launcher - keep spinning for next shot
     }
 
     private double calculateDistanceFromLimelight(LLResultTypes.FiducialResult fiducial) {
@@ -692,6 +660,26 @@ public class AB_DR extends LinearOpMode {
         odometryInitialized = true;
     }
 
+    /**
+     * Initializes drive encoder odometry by capturing current encoder positions as reference.
+     * MUST be called after detectInitialPosition() and before the main autonomous sequence starts.
+     * This ensures that updateOdometryPosition() calculates deltas from the current position,
+     * not from encoder position 0, which would corrupt the detected robotX/robotY values.
+     */
+    private void initializeDriveEncoderOdometry() {
+        lastLeftEncoderPos = frontLeftMotor.getCurrentPosition();
+        lastRightEncoderPos = frontRightMotor.getCurrentPosition();
+        lastStrafeEncoderPos = backLeftMotor.getCurrentPosition();
+        
+        telemetry.addLine("Drive encoder odometry initialized");
+        telemetry.addData("Initial robotX", "%.2f ft", robotX);
+        telemetry.addData("Initial robotY", "%.2f ft", robotY);
+        telemetry.addData("FL Encoder Reference", lastLeftEncoderPos);
+        telemetry.addData("FR Encoder Reference", lastRightEncoderPos);
+        telemetry.addData("BL Encoder Reference", lastStrafeEncoderPos);
+        telemetry.update();
+    }
+
     private void updateOdometryPosition() {
         int leftPos = frontLeftMotor.getCurrentPosition();
         int rightPos = frontRightMotor.getCurrentPosition();
@@ -771,19 +759,41 @@ public class AB_DR extends LinearOpMode {
     }
 
     private void intakeGateBalls() {
-        // Note: This method references undefined variables/methods from original code
-        // You'll need to implement proper turn and duration logic
-        double angle = Math.toRadians(60);
-        turnToAngle(angle);
-        // driveToPosition(-2.0, -1.0, angle);
-        driveToPosition(-2.0, -1.0, angle);
-        // driveToPosition(-5.0, -1.0, angle);
-        driveToPosition(-5.0, -1.0, angle);
+        // Gate intake sequence for Blue Alliance
+        // The gate is located at approximately (-5, -1) feet from field center
+        // Robot approaches at 60° angle to align with gate opening
+        
+        final double GATE_APPROACH_X = -2.0;  // Approach position X (feet)
+        final double GATE_APPROACH_Y = -1.0;  // Approach position Y (feet)
+        final double GATE_INTAKE_X = -5.0;    // Gate intake position X (feet)
+        final double GATE_INTAKE_Y = -1.0;    // Gate intake position Y (feet)
+        final double GATE_ANGLE_DEG = 60.0;   // Approach angle in degrees
+        
+        double angleRad = Math.toRadians(GATE_ANGLE_DEG);
+        
+        // Step 1: Turn to face gate approach angle
+        turnToAngle(angleRad);
+        
+        // Step 2: Drive to approach position (maintain heading)
+        driveToPosition(GATE_APPROACH_X, GATE_APPROACH_Y, angleRad);
+        
+        // Step 3: Start intake motor before approaching gate
         intakeMotor.setPower(INTAKE_POWER);
+        
+        // Step 4: Drive into gate to collect balls
+        driveToPosition(GATE_INTAKE_X, GATE_INTAKE_Y, angleRad);
+        
+        // Step 5: Wait for intake to collect balls
         sleep(4000); // 4 second intake
+        
+        // Step 6: Stop intake
         intakeMotor.setPower(0);
-        // driveToPosition(-2.0, -1.0, angle);
-        driveToPosition(-2.0, -1.0, angle);
+        
+        // Step 7: Back out to approach position
+        driveToPosition(GATE_APPROACH_X, GATE_APPROACH_Y, angleRad);
+        
+        // Step 8: Turn back to face forward (0 degrees)
+        turnToAngle(0);
     }
 
     private void intakeSpikeBalls(double spike_x, double spike_y, double angle) {
