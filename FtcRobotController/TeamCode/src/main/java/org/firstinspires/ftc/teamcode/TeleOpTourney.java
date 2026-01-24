@@ -62,7 +62,10 @@ public class TeleOpTourney extends LinearOpMode {
     private static final double RED_TOP_SPIKE_Y = 1.0;    // Mirrored Y
 
     private static final double RED_SHOOT_X = 0.0;         // Same X
-    private static final double RED_SHOOT_Y = 4.0;        // Mirrored Y
+    private static final double RED_SHOOT_Y = -4.0;        // Mirrored Y
+
+    private static final double RED_PARK_X = -3.0;
+    private static final double RED_PARK_Y = -3.0;
 
     private static final double OBELISK_X = 0.0;
     private static final double OBELISK_Y = 6.0;
@@ -230,15 +233,15 @@ public class TeleOpTourney extends LinearOpMode {
                 //driveToPosition(0,0,0);
                 // driveToPositionOdoWheels(0, 0);
                 //shoot position 0, -4
-                driveToPosition(0, -4, 0);
+                driveToPosition(RED_SHOOT_X, RED_SHOOT_Y, 0);
             }
             if (bPressed) {
                 //Park position
                 if(tagid == 20) {
-                    driveToPosition(3, -3, 0);
+                    driveToPosition(-RED_PARK_X, RED_PARK_Y, 0);
                 }
                 else {
-                    driveToPosition(-3,-3, 0);
+                    driveToPosition(RED_PARK_X, RED_PARK_Y, 0);
                 }
 //                if (togglestopper == 1) {
 //                    stopServo.setPosition(0.5);
@@ -393,16 +396,16 @@ public class TeleOpTourney extends LinearOpMode {
 //                    x = 0.3;  // Strafe right
 //                    rx = 0;
 //                }
-                if (currentGamepad1.dpad_left) {
+                if (currentGamepad2.dpad_left) {
                     tagid = 20;
                 }
-                else if (currentGamepad1.dpad_right) {
+                else if (currentGamepad2.dpad_right) {
                     tagid = 24;
                 }
-                if (currentGamepad1.dpad_up) {
+                if (currentGamepad2.dpad_up) {
                     launchMotorPower += 0.05;
                 }
-                else if (currentGamepad1.dpad_down) {
+                else if (currentGamepad2.dpad_down) {
                     launchMotorPower -= 0.05;
                 }
 
