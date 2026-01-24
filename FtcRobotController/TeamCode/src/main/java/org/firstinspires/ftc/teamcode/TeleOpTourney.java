@@ -531,7 +531,7 @@ public class TeleOpTourney extends LinearOpMode {
         yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // Initialize servo positions
-        stopServo.setPosition(0.5); // Closed
+        stopServo.setPosition(1.0); // Closed
         spatulaServo.setPosition(1.0); // Down
         spinSpinServo.setPosition(0.01); // Stop the spinservo to turn too far
         launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
@@ -811,9 +811,6 @@ public class TeleOpTourney extends LinearOpMode {
         //launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
         //sleep(2000);
         for (int i = 0; i < count; i++) {
-            // Open stopper to allow ball through
-            stopServo.setPosition(1.0);
-            sleep(1000);
             // Close stopper to stop other balls from going under the spatula
             stopServo.setPosition(0.5);
             //while (stopServo.getPosition() != 0.0);
