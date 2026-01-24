@@ -19,8 +19,8 @@ public class TeleOpTourney extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = -1.0;
-    private static final double LAUNCH_MOTOR_POWER_HIGH = -0.8;
-    private static final double LAUNCH_MOTOR_POWER_LOW = -0.4;
+    private static final double LAUNCH_MOTOR_POWER_HIGH = 0.9;
+    private static final double LAUNCH_MOTOR_POWER_LOW = 0.4;
     private static final double SPATULA_SERVO_POWER = 0.8;
 
     // Navigation constants
@@ -228,7 +228,7 @@ public class TeleOpTourney extends LinearOpMode {
                 }
             }
             if (xPressed) {
-                launchBalls(3);
+                launchBalls(1);
             }
 
             // ========== BACK BUTTON - RESET ODOMETRY ==========
@@ -425,10 +425,10 @@ public class TeleOpTourney extends LinearOpMode {
             backRightPower = Range.clip(backRightPower, -maxDrivePower, maxDrivePower);
 
             // Set motor powers
-            frontLeftMotor.setPower(frontLeftPower);
-            backLeftMotor.setPower(backLeftPower);
-            frontRightMotor.setPower(frontRightPower);
-            backRightMotor.setPower(backRightPower);
+            frontLeftMotor.setPower(frontLeftPower/2);
+            backLeftMotor.setPower(backLeftPower/2);
+            frontRightMotor.setPower(frontRightPower/2);
+            backRightMotor.setPower(backRightPower/2);
 
             // ========== TELEMETRY ==========
             telemetry.addLine("========== DRIVE ONLY MODE ==========");
@@ -454,6 +454,7 @@ public class TeleOpTourney extends LinearOpMode {
             telemetry.addData("BL", "%.2f", backLeftPower);
             telemetry.addData("FR", "%.2f", frontRightPower);
             telemetry.addData("BR", "%.2f", backRightPower);
+            telemetry.addData("LaunchMotorPower ", "%f", launchMotorPower);
             telemetry.addLine();
 
             telemetry.addLine("--- Controls ---");
@@ -951,10 +952,10 @@ public class TeleOpTourney extends LinearOpMode {
         backRightPower = Range.clip(backRightPower, -0.5, 0.5);
 
 
-        frontLeftMotor.setPower(frontLeftPower);
-        backLeftMotor.setPower(backLeftPower);
-        frontRightMotor.setPower(frontRightPower);
-        backRightMotor.setPower(backRightPower);
+        frontLeftMotor.setPower(frontLeftPower/2);
+        backLeftMotor.setPower(backLeftPower/2);
+        frontRightMotor.setPower(frontRightPower/2);
+        backRightMotor.setPower(backRightPower/2);
     }
 
     // ========== ODOMETRY POD API ==========
@@ -1131,10 +1132,10 @@ public class TeleOpTourney extends LinearOpMode {
             }
 
             // Set motor powers
-            frontLeftMotor.setPower(frontLeftPower);
-            backLeftMotor.setPower(backLeftPower);
-            frontRightMotor.setPower(frontRightPower);
-            backRightMotor.setPower(backRightPower);
+            frontLeftMotor.setPower(frontLeftPower/2);
+            backLeftMotor.setPower(backLeftPower/2);
+            frontRightMotor.setPower(frontRightPower/2);
+            backRightMotor.setPower(backRightPower/2);
 
             // Update telemetry
             telemetry.addLine("--- Odo Wheel Navigation ---");

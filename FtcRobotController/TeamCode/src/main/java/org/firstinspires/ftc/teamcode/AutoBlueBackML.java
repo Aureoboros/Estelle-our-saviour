@@ -397,12 +397,47 @@ public class AutoBlueBackML extends LinearOpMode {
     }
 
     private double calculateDistanceFromLimelight(LLResultTypes.FiducialResult fiducial) {
-        // Get target area for distance estimation
+        // Method 1: Use target area (requires calibration)
         double area = fiducial.getTargetArea();
         
-        // Rough distance estimation (CALIBRATE THIS based on your setup)
-        // This is a placeholder formula - you'll need to calibrate
-        double distance = 5000.0 / Math.sqrt(area);
+        // Method 2: Use TY (vertical angle) for more accurate distance
+        // This uses the known height difference between camera and tag
+        double ty = fiducial.getTargetYDegrees();
+        
+        // Camera mounting height and angle (CALIBRATE THESE FOR YOUR ROBOT)
+        final double CAMERA_HEIGHT_MM = 200.0;  // Height of camera lens from ground
+        final double CAMERA_ANGLE_DEG = 0.0;    // Camera tilt angle (0 = horizontal)
+        final double TAG_HEIGHT_MM = 150.0;     // Height of AprilTag center from ground
+        
+        // Calculate distance using trigonometry
+        // distance = (tagHeight - cameraHeight) / tan(cameraAngle + ty)
+        double angleToTargetRad = Math.toRadians(CAMERA_ANGLE_DEG + ty);
+        
+        double distanceFromTY = 0.0;
+        if (Math.abs(angleToTargetRad) > 0.01) {  // Avoid division by zero
+            distanceFromTY = Math.abs((TAG_HEIGHT_MM - CAMERA_HEIGHT_MM) / Math.tan(angleToTargetRad));
+        }
+        
+        // Method 3: Use area-based estimation as fallback
+        // Formula: distance = k / sqrt(area), where k is calibration constant
+        // CALIBRATE: Measure area at known distance, then k = distance * sqrt(area)
+        final double AREA_CALIBRATION_CONSTANT = 5000.0;  // CALIBRATE THIS
+        double distanceFromArea = AREA_CALIBRATION_CONSTANT / Math.sqrt(Math.max(area, 0.0001));
+        
+        // Use TY-based distance if valid, otherwise fall back to area
+        double distance;
+        if (distanceFromTY > 100.0 && distanceFromTY < 5000.0) {
+            // TY-based distance seems reasonable
+            distance = distanceFromTY;
+            telemetry.addData("Distance Method", "TY-based: %.0f mm", distanceFromTY);
+        } else {
+            // Fall back to area-based
+            distance = distanceFromArea;
+            telemetry.addData("Distance Method", "Area-based: %.0f mm", distanceFromArea);
+        }
+        
+        telemetry.addData("TY Angle", "%.2f°", ty);
+        telemetry.addData("Target Area", "%.4f", area);
         
         return distance;
     }
@@ -497,16 +532,73 @@ public class AutoBlueBackML extends LinearOpMode {
         }
     }
 
+    /**
+     * Drives the robot to a specific position on the field using wheel encoders.
+     * Uses a TWO-PHASE approach for large heading changes (>30°) to prevent oscillation:
+     * - Phase 1: Drive to target position (no heading change)
+     * - Phase 2: Rotate in place to target heading
+     *
+     * For small heading changes (≤30°), uses single-phase combined movement.
+     *
+     * @param targetX Target X position in FEET from field center
+     * @param targetY Target Y position in FEET from field center
+     * @param targetHeading Target heading in RADIANS
+     */
     private void driveToPosition(double targetX, double targetY, double targetHeading) {
         targetX = Range.clip(targetX, FIELD_MIN_FEET, FIELD_MAX_FEET);
         targetY = Range.clip(targetY, FIELD_MIN_FEET, FIELD_MAX_FEET);
 
-        double startTime = getRuntime();
-        double timeout = 8.0;
+        // Two-phase threshold: heading changes larger than this use two-phase movement
+        final double LARGE_HEADING_THRESHOLD_RAD = Math.toRadians(30.0);
 
         if (!odometryInitialized) {
             resetOdometry();
         }
+
+        // Get current heading to determine if we need two-phase movement
+        double currentHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+        double initialHeadingError = targetHeading - currentHeading;
+        while (initialHeadingError > Math.PI) initialHeadingError -= 2 * Math.PI;
+        while (initialHeadingError < -Math.PI) initialHeadingError += 2 * Math.PI;
+
+        boolean useTwoPhase = Math.abs(initialHeadingError) > LARGE_HEADING_THRESHOLD_RAD;
+
+        if (useTwoPhase) {
+            // TWO-PHASE MOVEMENT: First drive to position, then rotate
+            telemetry.addLine("Using TWO-PHASE movement (large heading change)");
+            telemetry.addData("Heading change", "%.1f° > 30° threshold", 
+                    Math.toDegrees(Math.abs(initialHeadingError)));
+            telemetry.update();
+
+            // Phase 1: Drive to position without heading change (70% of timeout)
+            driveToPositionPhase(targetX, targetY, currentHeading, 5.6, true, "PHASE 1: DRIVING");
+
+            // Phase 2: Rotate in place to target heading (30% of timeout)
+            driveToPositionPhase(targetX, targetY, targetHeading, 2.4, false, "PHASE 2: ROTATING");
+
+        } else {
+            // SINGLE-PHASE MOVEMENT: Combined drive and rotate
+            driveToPositionPhase(targetX, targetY, targetHeading, 8.0, false, "SINGLE-PHASE");
+        }
+
+        stopDriveMotors();
+        sleep(100);
+    }
+
+    /**
+     * Internal helper method that executes a single phase of movement for driveToPosition.
+     * Can be configured for position-only (Phase 1) or combined position+heading.
+     *
+     * @param targetX Target X position in FEET
+     * @param targetY Target Y position in FEET
+     * @param targetHeading Target heading in RADIANS
+     * @param timeout Maximum time for this phase
+     * @param positionOnlyPhase If true, skip heading correction (Phase 1)
+     * @param phaseName Name for telemetry display
+     */
+    private void driveToPositionPhase(double targetX, double targetY, double targetHeading,
+                                       double timeout, boolean positionOnlyPhase, String phaseName) {
+        double startTime = getRuntime();
 
         while (opModeIsActive() && (getRuntime() - startTime) < timeout) {
             updateOdometryPosition();
@@ -515,40 +607,79 @@ public class AutoBlueBackML extends LinearOpMode {
             double deltaY = targetY - robotY;
             double distanceToTarget = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-            if (distanceToTarget * 12 < POSITION_TOLERANCE_INCHES) {
-                stopDriveMotors();
-                break;
-            }
-
-            double angleToTarget = Math.atan2(deltaX, deltaY);
-            double speed = AUTO_MAX_SPEED;
-            
-            if (distanceToTarget < SLOWDOWN_DISTANCE_FEET) {
-                double slowdownRatio = distanceToTarget / SLOWDOWN_DISTANCE_FEET;
-                speed = AUTO_MIN_SPEED + (AUTO_MAX_SPEED - AUTO_MIN_SPEED) * slowdownRatio;
-            }
-
             double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
             robotHeading = heading;
 
-            double x = Math.sin(angleToTarget - heading) * speed;
-            double y = Math.cos(angleToTarget - heading) * speed;
-
+            // Calculate heading error
             double headingError = targetHeading - heading;
             while (headingError > Math.PI) headingError -= 2 * Math.PI;
             while (headingError < -Math.PI) headingError += 2 * Math.PI;
-            double rx = headingError * 0.5;
+
+            boolean positionReached = distanceToTarget * 12 < POSITION_TOLERANCE_INCHES;
+            boolean headingReached = Math.abs(headingError) < Math.toRadians(ANGLE_TOLERANCE_DEGREES);
+
+            // Check exit conditions based on phase type
+            if (positionOnlyPhase) {
+                // Phase 1: Exit when position is reached
+                if (positionReached) {
+                    stopDriveMotors();
+                    break;
+                }
+            } else {
+                // Phase 2 or Single-phase: Exit when both position AND heading are reached
+                if (positionReached && headingReached) {
+                    stopDriveMotors();
+                    break;
+                }
+            }
+
+            // Calculate drive powers
+            double x = 0.0;
+            double y = 0.0;
+            double rx = 0.0;
+
+            // Only drive if position not yet reached
+            if (!positionReached) {
+                double angleToTarget = Math.atan2(deltaX, deltaY);
+                double speed = AUTO_MAX_SPEED;
+
+                if (distanceToTarget < SLOWDOWN_DISTANCE_FEET) {
+                    double slowdownRatio = distanceToTarget / SLOWDOWN_DISTANCE_FEET;
+                    speed = AUTO_MIN_SPEED + (AUTO_MAX_SPEED - AUTO_MIN_SPEED) * slowdownRatio;
+                }
+
+                x = Math.sin(angleToTarget - heading) * speed;
+                y = Math.cos(angleToTarget - heading) * speed;
+            }
+
+            // Heading correction (skip in position-only phase)
+            if (!positionOnlyPhase && !headingReached) {
+                // Scale down rotation when far from position to prevent oscillation (single-phase only)
+                double rotationScale = 1.0;
+                if (!positionReached && distanceToTarget > 2.0) { // 2 feet = ROTATION_SCALE_DIST equivalent
+                    rotationScale = 0.2;
+                } else if (!positionReached && distanceToTarget > POSITION_TOLERANCE_INCHES / 12.0) {
+                    rotationScale = 0.2 + 0.8 * (1.0 - (distanceToTarget / 2.0));
+                }
+
+                rx = headingError * 0.5 * rotationScale;
+
+                // Apply minimum rotation power when doing pure rotation (position reached)
+                if (positionReached && Math.abs(rx) < 0.1 && !headingReached) {
+                    rx = Math.signum(rx) * 0.1;
+                }
+            }
 
             driveFieldCentric(x, y, rx, heading);
 
-            telemetry.addData("Target", "X: %.2f, Y: %.2f", targetX, targetY);
-            telemetry.addData("Current", "X: %.2f, Y: %.2f", robotX, robotY);
+            telemetry.addLine("--- " + phaseName + " ---");
+            telemetry.addData("Target", "X: %.2f, Y: %.2f, H: %.1f°", targetX, targetY, Math.toDegrees(targetHeading));
+            telemetry.addData("Current", "X: %.2f, Y: %.2f, H: %.1f°", robotX, robotY, Math.toDegrees(heading));
             telemetry.addData("Distance", "%.2f ft", distanceToTarget);
+            telemetry.addData("Heading Error", "%.1f°", Math.toDegrees(headingError));
+            telemetry.addData("Time remaining", "%.1f s", timeout - (getRuntime() - startTime));
             telemetry.update();
         }
-
-        stopDriveMotors();
-        sleep(100);
     }
 
     private void resetOdometry() {
@@ -817,8 +948,12 @@ public class AutoBlueBackML extends LinearOpMode {
 
     /**
      * Drives the robot to a specific ABSOLUTE position on the FTC 2026 field using xOdo and yOdo wheels.
-     * Uses a PID-like control loop for smooth and accurate positioning.
-     * 
+     * Uses a TWO-PHASE approach for large heading changes to prevent oscillation:
+     * - Phase 1: Drive to target position (no heading change)
+     * - Phase 2: Rotate in place to target heading
+     *
+     * For small heading changes (< LARGE_HEADING_THRESHOLD), uses single-phase movement.
+     *
      * IMPORTANT: Call initializeAbsoluteOdometry() once at the start of autonomous before using this method.
      *
      * FTC 2026 Field Coordinates:
@@ -845,13 +980,16 @@ public class AutoBlueBackML extends LinearOpMode {
         final double POSITION_TOLERANCE = 1.0; // inches
         final double HEADING_TOLERANCE = 2.0;  // degrees
 
+        // Two-phase threshold: heading changes larger than this use two-phase movement
+        final double LARGE_HEADING_THRESHOLD = 30.0; // degrees
+
         // PID-like control gains
         final double KP_DRIVE = 0.03;    // Proportional gain for position
         final double KP_HEADING = 0.02;  // Proportional gain for heading
         final double MIN_POWER = 0.15;   // Minimum power to overcome friction
         final double SLOWDOWN_DIST = 12.0; // Start slowing down at 12 inches
-        
-        // Anti-oscillation: scale down rotation when far from target position
+
+        // Anti-oscillation: scale down rotation when far from target position (for small heading changes)
         final double ROTATION_SCALE_DIST = 24.0; // Full rotation only within this distance
 
         // Clamp target to field bounds
@@ -864,13 +1002,78 @@ public class AutoBlueBackML extends LinearOpMode {
             initializeAbsoluteOdometry(BLUE_DEFAULT_START_X * 12.0, BLUE_DEFAULT_START_Y * 12.0);
         }
 
+        // Get current heading to determine if we need two-phase movement
+        double currentHeadingDeg = Math.toDegrees(imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS));
+        double initialHeadingError = targetHeadingDeg - currentHeadingDeg;
+        while (initialHeadingError > 180) initialHeadingError -= 360;
+        while (initialHeadingError < -180) initialHeadingError += 360;
+
+        boolean useTwoPhase = Math.abs(initialHeadingError) > LARGE_HEADING_THRESHOLD;
+
+        if (useTwoPhase) {
+            // TWO-PHASE MOVEMENT: First drive to position, then rotate
+            telemetry.addLine("Using TWO-PHASE movement (large heading change)");
+            telemetry.addData("Heading change", "%.1f° > %.1f° threshold", 
+                    Math.abs(initialHeadingError), LARGE_HEADING_THRESHOLD);
+            telemetry.update();
+
+            // Phase 1: Drive to position without heading change
+            boolean phase1Success = driveToPositionOdoWheelsPhase(
+                    targetXInches, targetYInches, currentHeadingDeg,
+                    maxSpeed, timeoutSeconds * 0.7, // Use 70% of timeout for position
+                    POSITION_TOLERANCE, HEADING_TOLERANCE,
+                    KP_DRIVE, KP_HEADING, MIN_POWER, SLOWDOWN_DIST, ROTATION_SCALE_DIST,
+                    true, "PHASE 1: DRIVING TO POSITION");
+
+            if (!phase1Success) {
+                stopDriveMotors();
+                return false;
+            }
+
+            // Phase 2: Rotate in place to target heading
+            boolean phase2Success = driveToPositionOdoWheelsPhase(
+                    targetXInches, targetYInches, targetHeadingDeg,
+                    maxSpeed * 0.6, timeoutSeconds * 0.3, // Use 30% of timeout for rotation, slower speed
+                    POSITION_TOLERANCE, HEADING_TOLERANCE,
+                    KP_DRIVE, KP_HEADING, MIN_POWER, SLOWDOWN_DIST, ROTATION_SCALE_DIST,
+                    false, "PHASE 2: ROTATING TO HEADING");
+
+            stopDriveMotors();
+            return phase2Success;
+
+        } else {
+            // SINGLE-PHASE MOVEMENT: Combined drive and rotate (for small heading changes)
+            boolean success = driveToPositionOdoWheelsPhase(
+                    targetXInches, targetYInches, targetHeadingDeg,
+                    maxSpeed, timeoutSeconds,
+                    POSITION_TOLERANCE, HEADING_TOLERANCE,
+                    KP_DRIVE, KP_HEADING, MIN_POWER, SLOWDOWN_DIST, ROTATION_SCALE_DIST,
+                    false, "SINGLE-PHASE MOVEMENT");
+
+            stopDriveMotors();
+            return success;
+        }
+    }
+
+    /**
+     * Internal helper method that executes a single phase of movement.
+     * Can be configured for position-only (Phase 1) or combined position+heading.
+     */
+    private boolean driveToPositionOdoWheelsPhase(
+            double targetXInches, double targetYInches, double targetHeadingDeg,
+            double maxSpeed, double timeoutSeconds,
+            double positionTolerance, double headingTolerance,
+            double kpDrive, double kpHeading, double minPower, 
+            double slowdownDist, double rotationScaleDist,
+            boolean positionOnlyPhase, String phaseName) {
+
         double startTime = getRuntime();
         boolean targetReached = false;
 
         while (opModeIsActive() && (getRuntime() - startTime) < timeoutSeconds && !targetReached) {
             // Update absolute position from odometry
             updateAbsoluteOdometry();
-            
+
             // Get current absolute position
             double currentXInches = absoluteFieldX;
             double currentYInches = absoluteFieldY;
@@ -887,20 +1090,29 @@ public class AutoBlueBackML extends LinearOpMode {
             while (headingError > 180) headingError -= 360;
             while (headingError < -180) headingError += 360;
 
-            // Check if target reached (both position AND heading)
-            boolean positionReached = distance < POSITION_TOLERANCE;
-            boolean headingReached = Math.abs(headingError) < HEADING_TOLERANCE;
-            
-            if (positionReached && headingReached) {
-                targetReached = true;
-                break;
+            // Check if target reached
+            boolean positionReached = distance < positionTolerance;
+            boolean headingReached = Math.abs(headingError) < headingTolerance;
+
+            // For position-only phase, only check position
+            if (positionOnlyPhase) {
+                if (positionReached) {
+                    targetReached = true;
+                    break;
+                }
+            } else {
+                // For combined or rotation-only phase, check both
+                if (positionReached && headingReached) {
+                    targetReached = true;
+                    break;
+                }
             }
 
             // Calculate drive powers
             double driveX = 0.0;
             double driveY = 0.0;
             double rotationPower = 0.0;
-            
+
             // Only drive if position not yet reached
             if (!positionReached) {
                 // Calculate drive angle in field frame
@@ -908,47 +1120,47 @@ public class AutoBlueBackML extends LinearOpMode {
 
                 // Speed scaling based on distance (slow down as we approach target)
                 double speedScale = maxSpeed;
-                if (distance < SLOWDOWN_DIST) {
-                    speedScale = MIN_POWER + (maxSpeed - MIN_POWER) * (distance / SLOWDOWN_DIST);
+                if (distance < slowdownDist) {
+                    speedScale = minPower + (maxSpeed - minPower) * (distance / slowdownDist);
                 }
 
                 // Convert field-centric movement to robot-centric
                 double robotAngle = angleToTarget - currentHeadingRad;
-                driveX = Math.sin(robotAngle) * KP_DRIVE * distance; // removed speedScale bc distance^2
-                driveY = Math.cos(robotAngle) * KP_DRIVE * distance; // same thing here
+                driveX = Math.sin(robotAngle) * speedScale * kpDrive * distance;
+                driveY = Math.cos(robotAngle) * speedScale * kpDrive * distance;
 
                 // Clamp drive powers
                 driveX = Range.clip(driveX, -maxSpeed, maxSpeed);
                 driveY = Range.clip(driveY, -maxSpeed, maxSpeed);
 
                 // Apply minimum power to overcome friction (only when driving)
-                if (Math.abs(driveX) < MIN_POWER && Math.abs(driveX) > 0.01) {
-                    driveX = Math.signum(driveX) * MIN_POWER;
+                if (Math.abs(driveX) < minPower && Math.abs(driveX) > 0.01) {
+                    driveX = Math.signum(driveX) * minPower;
                 }
-                if (Math.abs(driveY) < MIN_POWER && Math.abs(driveY) > 0.01) {
-                    driveY = Math.signum(driveY) * MIN_POWER;
+                if (Math.abs(driveY) < minPower && Math.abs(driveY) > 0.01) {
+                    driveY = Math.signum(driveY) * minPower;
                 }
             }
 
-            // Heading correction - scale down when far from position to prevent oscillation
-            if (!headingReached) {
-                // Calculate rotation scale factor (0 to 1) based on distance
-                // Full rotation when close to target, reduced when far
+            // Heading correction
+            if (!headingReached && !positionOnlyPhase) {
+                // For position-only phase, skip rotation entirely
+                // For combined phase with position not reached, scale down rotation
                 double rotationScale = 1.0;
-                if (distance > ROTATION_SCALE_DIST) {
+                if (!positionReached && distance > rotationScaleDist) {
                     // When far from target, reduce rotation to 20% to prevent oscillation
                     rotationScale = 0.2;
-                } else if (distance > POSITION_TOLERANCE) {
+                } else if (!positionReached && distance > positionTolerance) {
                     // Linear interpolation between 20% and 100%
-                    rotationScale = 0.2 + 0.8 * (1.0 - (distance / ROTATION_SCALE_DIST));
+                    rotationScale = 0.2 + 0.8 * (1.0 - (distance / rotationScaleDist));
                 }
-                
-                rotationPower = headingError * KP_HEADING * rotationScale;
+
+                rotationPower = headingError * kpHeading * rotationScale;
                 rotationPower = Range.clip(rotationPower, -maxSpeed * 0.5, maxSpeed * 0.5);
-                
+
                 // Apply minimum rotation power only when position is reached (pure rotation)
-                if (positionReached && Math.abs(rotationPower) < MIN_POWER && Math.abs(headingError) > HEADING_TOLERANCE) {
-                    rotationPower = Math.signum(rotationPower) * MIN_POWER;
+                if (positionReached && Math.abs(rotationPower) < minPower && Math.abs(headingError) > headingTolerance) {
+                    rotationPower = Math.signum(rotationPower) * minPower;
                 }
             }
 
@@ -959,12 +1171,12 @@ public class AutoBlueBackML extends LinearOpMode {
             double backRightPower = -driveY + driveX - rotationPower;
 
             // Normalize motor powers
-            double maxPower = Math.max(Math.abs(frontLeftPower), Math.abs(backLeftPower));
-            maxPower = Math.max(maxPower, Math.abs(frontRightPower));
-            maxPower = Math.max(maxPower, Math.abs(backRightPower));
+            double maxPowerCalc = Math.max(Math.abs(frontLeftPower), Math.abs(backLeftPower));
+            maxPowerCalc = Math.max(maxPowerCalc, Math.abs(frontRightPower));
+            maxPowerCalc = Math.max(maxPowerCalc, Math.abs(backRightPower));
 
-            if (maxPower > maxSpeed) {
-                double scale = maxSpeed / maxPower;
+            if (maxPowerCalc > maxSpeed) {
+                double scale = maxSpeed / maxPowerCalc;
                 frontLeftPower *= scale;
                 backLeftPower *= scale;
                 frontRightPower *= scale;
@@ -978,22 +1190,16 @@ public class AutoBlueBackML extends LinearOpMode {
             backRightMotor.setPower(backRightPower);
 
             // Update telemetry
-            telemetry.addLine("--- Absolute Odo Navigation ---");
+            telemetry.addLine("--- " + phaseName + " ---");
             telemetry.addData("Target (absolute)", "X: %.1f, Y: %.1f, H: %.1f°",
                     targetXInches, targetYInches, targetHeadingDeg);
             telemetry.addData("Current (absolute)", "X: %.1f, Y: %.1f, H: %.1f°",
                     currentXInches, currentYInches, currentHeadingDeg);
-            telemetry.addData("Error", "X: %.1f, Y: %.1f", errorX, errorY);
             telemetry.addData("Distance to target", "%.2f in", distance);
             telemetry.addData("Heading Error", "%.1f°", headingError);
-            telemetry.addData("Phase", positionReached ? "ROTATING" : "DRIVING");
-            telemetry.addData("xOdo Raw", "%d ticks", getXOdoPosition());
-            telemetry.addData("yOdo Raw", "%d ticks", getYOdoPosition());
+            telemetry.addData("Time remaining", "%.1f s", timeoutSeconds - (getRuntime() - startTime));
             telemetry.update();
         }
-
-        // Stop all motors
-        stopDriveMotors();
 
         return targetReached;
     }
