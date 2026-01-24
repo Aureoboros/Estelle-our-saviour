@@ -233,10 +233,15 @@ public class AutoBlueBackML extends LinearOpMode {
             RevHubOrientationOnRobot.UsbFacingDirection.FORWARD));
         imu.initialize(parameters);
 
-        // Initialize Limelight
+        // Initialize Limelight in 3D mode for AprilTag pose estimation
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(0);
+        limelight.pipelineSwitch(0);  // Pipeline 0 should be configured for AprilTag 3D in Limelight web interface
+        limelight.setPollRateHz(100); // Set polling rate for responsive tracking
         limelight.start();
+        
+        // Initialize robot orientation for 3D localization
+        // This should be called periodically with IMU heading for MegaTag2
+        limelight.updateRobotOrientation(0.0);
         
         // Verify Limelight connection
         telemetry.addLine("--- Limelight Status ---");

@@ -216,8 +216,8 @@ public class TeleOpTourney extends LinearOpMode {
 
             // ========== A/B/X BUTTONS - SPEED PRESETS ==========
             if (aPressed) {
-                // driveToPosition(0,0,0);
-                driveToPosition(0, 0);
+                driveToPosition(0,0,0);
+                // driveToPositionOdoWheels(0, 0);
             }
             if (bPressed) {
                 if (togglestopper == 1) {
@@ -510,10 +510,15 @@ public class TeleOpTourney extends LinearOpMode {
                 RevHubOrientationOnRobot.UsbFacingDirection.FORWARD));
         imu.initialize(parameters);
 
-        // Initialize Limelight
+        // Initialize Limelight in 3D mode for AprilTag pose estimation
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(0);
+        limelight.pipelineSwitch(0);  // Pipeline 0 should be configured for AprilTag 3D in Limelight web interface
+        limelight.setPollRateHz(100); // Set polling rate for responsive tracking
         limelight.start();
+        
+        // Initialize robot orientation for 3D localization
+        // This should be called periodically with IMU heading for MegaTag2
+        limelight.updateRobotOrientation(0.0);
 
         // Set motor directions
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
@@ -638,7 +643,7 @@ public class TeleOpTourney extends LinearOpMode {
         if (!targetAcquired) {
             telemetry.addLine("⚠ Target not found - shooting with default settings");
             telemetry.update();
-            setLauncherSpeed(-MAX_MOTOR_RPM * 0.7);
+            setLauncherSpeed(MAX_MOTOR_RPM * 0.7);
             sleep(500);
             launchBalls(3);
         }
@@ -741,20 +746,20 @@ public class TeleOpTourney extends LinearOpMode {
     private void aimTurretAtTag(LLResultTypes.FiducialResult fiducial) {
         double tx = fiducial.getTargetXDegrees();
 
-        // Turret tracking constants for 5-turn servo with 0.0-0.2 range
-        // The 0.0-0.2 range represents ~72° of rotation (20% of 360°)
-        // This is the physical limit of the turret mechanism
+        // Turret tracking constants for 5-turn servo with 0.0-0.5 range
+        // The 0.0-0.5 range represents 180° of rotation (50% of 360°)
+        // This allows full hemisphere coverage for target tracking
         final double TX_TOLERANCE = 2.0;        // Don't adjust if within 2 degrees
         final double SERVO_MIN = 0.0;           // Minimum servo position
-        final double SERVO_MAX = 0.2;           // Maximum servo position (physical limit)
-        final double SERVO_CENTER = 0.1;        // Center position for turret
+        final double SERVO_MAX = 0.5;           // Maximum servo position for 180° rotation
+        final double SERVO_CENTER = 0.25;       // Center position for turret (middle of 0.0-0.5)
         
-        // Proportional gain: 0.2 range / ~27° max TX = ~0.0074 per degree
+        // Proportional gain: 0.5 range / ~27° max TX = ~0.0185 per degree
         // Multiplied by 2.5 for faster/more responsive tracking
-        final double BASE_GAIN = 0.005;         // Base servo units per degree of TX
+        final double BASE_GAIN = 0.0125;        // Base servo units per degree of TX (scaled for 0.5 range)
         final double GAIN_MULTIPLIER = 2.5;     // Multiplier for faster movement
-        final double PROPORTIONAL_GAIN = BASE_GAIN * GAIN_MULTIPLIER; // = 0.0125
-        final double MAX_STEP = 0.01 * GAIN_MULTIPLIER; // = 0.025 (scaled max step)
+        final double PROPORTIONAL_GAIN = BASE_GAIN * GAIN_MULTIPLIER; // = 0.03125
+        final double MAX_STEP = 0.025 * GAIN_MULTIPLIER; // = 0.0625 (scaled max step for larger range)
 
         // Skip if already on target
         if (Math.abs(tx) <= TX_TOLERANCE) {
@@ -770,7 +775,7 @@ public class TeleOpTourney extends LinearOpMode {
         double currentPos = spinSpinServo.getPosition();
         double newPos = currentPos + adjustment;
 
-        // Clip to valid servo range (0.0 to 0.2)
+        // Clip to valid servo range (0.0 to 0.5)
         newPos = Range.clip(newPos, SERVO_MIN, SERVO_MAX);
         spinSpinServo.setPosition(newPos);
 
