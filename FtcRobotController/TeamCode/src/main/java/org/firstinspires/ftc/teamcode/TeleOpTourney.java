@@ -19,7 +19,8 @@ public class TeleOpTourney extends LinearOpMode {
 
     // Motor power constants
     private static final double INTAKE_POWER = -1.0;
-    private static final double LAUNCH_MOTOR_POWER = -0.7;
+    private static final double LAUNCH_MOTOR_POWER_HIGH = -0.8;
+    private static final double LAUNCH_MOTOR_POWER_LOW = -0.4;
     private static final double SPATULA_SERVO_POWER = 0.8;
 
     // Navigation constants
@@ -125,13 +126,15 @@ public class TeleOpTourney extends LinearOpMode {
     private enum SpeedMode { SLOW, MEDIUM, FAST }
     private TeleOpTourney.SpeedMode currentSpeedMode = TeleOpTourney.SpeedMode.FAST;
 
-    private double launchMotorPowerAdjust = SPEED_FAST;
+    private double launchMotorPower = LAUNCH_MOTOR_POWER_HIGH;
 
     private int togglestopper = 1; // B toggle to open/close stopper, default close
 
     private int toggleintake = 1; // Y toggle intake default started
 
     private int togglespatula = 0; // toggle spatula, default down
+
+    private int togglemotorpower = 1; // Back toggles launch motor power between high & low, default high for shooting from far
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -150,7 +153,7 @@ public class TeleOpTourney extends LinearOpMode {
 
         waitForStart();
         if (isStopRequested()) return;
-        launchMotor.setPower(-LAUNCH_MOTOR_POWER);
+        launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
         intakeMotor.setPower(INTAKE_POWER);
         stopServo.setPosition(0.5);
 
@@ -247,7 +250,20 @@ public class TeleOpTourney extends LinearOpMode {
 //                lastFREncoder = 0;
 //                lastBREncoder = 0;
 //                COME BACK TO THIS TOO ARATRIKA...PLEASE...
-                resetOdometryPods();
+
+
+
+                //resetOdometryPods();
+                if(togglemotorpower == 1) {
+                    launchMotorPower = LAUNCH_MOTOR_POWER_HIGH;
+                    togglemotorpower = 0;
+                    launchMotor.setPower(launchMotorPower);
+                }
+                else {
+                    launchMotorPower = LAUNCH_MOTOR_POWER_LOW;
+                    togglemotorpower = 1;
+                    launchMotor.setPower(launchMotorPower);
+                }
             }
 
             // ========== LEFT BUMPER - RESET IMU HEADING ==========
@@ -509,7 +525,7 @@ public class TeleOpTourney extends LinearOpMode {
         stopServo.setPosition(0.5); // Closed
         spatulaServo.setPosition(1.0); // Down
         spinSpinServo.setPosition(0.01); // Stop the spinservo to turn too far
-        launchMotor.setPower(-LAUNCH_MOTOR_POWER);
+        launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
 
 
 
@@ -704,7 +720,7 @@ public class TeleOpTourney extends LinearOpMode {
      Go back to open stopper state (loop begin)
     */
     private void launchBalls(int count) {
-        //launchMotor.setPower(-LAUNCH_MOTOR_POWER);
+        //launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
         //sleep(2000);
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
