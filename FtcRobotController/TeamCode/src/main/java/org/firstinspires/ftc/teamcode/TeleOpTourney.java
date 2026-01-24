@@ -643,7 +643,8 @@ public class TeleOpTourney extends LinearOpMode {
         if (!targetAcquired) {
             telemetry.addLine("⚠ Target not found - shooting with default settings");
             telemetry.update();
-            setLauncherSpeed(MAX_MOTOR_RPM * 0.7);
+            //setLauncherSpeed(MAX_MOTOR_RPM * 0.9);
+            launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
             sleep(500);
             launchBalls(3);
         }
