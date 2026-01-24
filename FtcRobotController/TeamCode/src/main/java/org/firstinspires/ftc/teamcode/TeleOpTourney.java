@@ -31,8 +31,9 @@ public class TeleOpTourney extends LinearOpMode {
     private static final double ANGLE_TOLERANCE_DEGREES = 2.5;
 
     // Limelight/Launch constants
-    private static final double LAUNCH_HEIGHT_MM = 304.143;
-    private static final double TARGET_HEIGHT_ABOVE_TAG_MM = 152.4; // 6 inches
+    private static final double LAUNCH_HEIGHT_MM = 304.143;      // Height of launcher from ground (12 inches)
+    private static final double TAG_HEIGHT_MM = 750.0;           // Height of AprilTag center from ground (calibrated)
+    private static final double TARGET_HEIGHT_MM = 900.0;        // Target height (goal opening) - above the tag
     private static final double LAUNCH_ANGLE_DEG = 54.0;
     private static final double LAUNCH_ANGLE_RAD = Math.toRadians(LAUNCH_ANGLE_DEG);
     private static final double GRAVITY_MM_S2 = 9810.0;
@@ -139,6 +140,7 @@ public class TeleOpTourney extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         initializeHardware();
+        detectInitialPosition();
 
 
         // Initialize gamepad state tracking
@@ -215,7 +217,7 @@ public class TeleOpTourney extends LinearOpMode {
             // ========== A/B/X BUTTONS - SPEED PRESETS ==========
             if (aPressed) {
                 // driveToPosition(0,0,0);
-                driveToPositionOdoWheels(0, 0);
+                driveToPosition(0, 0);
             }
             if (bPressed) {
                 if (togglestopper == 1) {
@@ -229,6 +231,7 @@ public class TeleOpTourney extends LinearOpMode {
             }
             if (xPressed) {
                 launchBalls(1);
+            //    autoAimAndShoot();
             }
 
             // ========== BACK BUTTON - RESET ODOMETRY ==========
@@ -612,8 +615,9 @@ public class TeleOpTourney extends LinearOpMode {
                         aimTurretAtTag(fiducial);
 
                         // Set launcher speed
-                        setLauncherSpeed(requiredRPM);
-                        sleep(500); // Allow launcher to spin up
+                        //setLauncherSpeed(requiredRPM);
+                        launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
+                        sleep(1000); // Allow launcher to spin up
 
                         // Launch sequence
                         launchBalls(3); // Launch 3 balls
@@ -634,7 +638,7 @@ public class TeleOpTourney extends LinearOpMode {
         if (!targetAcquired) {
             telemetry.addLine("⚠ Target not found - shooting with default settings");
             telemetry.update();
-            setLauncherSpeed(MAX_MOTOR_RPM * 0.7);
+            setLauncherSpeed(-MAX_MOTOR_RPM * 0.7);
             sleep(500);
             launchBalls(3);
         }
@@ -644,13 +648,48 @@ public class TeleOpTourney extends LinearOpMode {
     }
 
     private double calculateDistanceFromLimelight(LLResultTypes.FiducialResult fiducial) {
-        // Get target area for distance estimation
+        // Method 1: Use target area (requires calibration)
         double area = fiducial.getTargetArea();
+        
+        // Method 2: Use TY (vertical angle) for more accurate distance
+        // This uses the known height difference between camera and tag
+        double ty = fiducial.getTargetYDegrees();
 
-        // Rough distance estimation (CALIBRATE THIS based on your setup)
-        // This is a placeholder formula - you'll need to calibrate
-        double distance = 5000.0 / Math.sqrt(area);
-
+        // Camera mounting height and angle (CALIBRATE THESE FOR YOUR ROBOT)
+        final double CAMERA_HEIGHT_MM = 330.0;  // Height of camera lens from ground
+        final double CAMERA_ANGLE_DEG = 0.0;    // Camera tilt angle (0 = horizontal)
+        final double TAG_HEIGHT_MM = 750.0;     // Height of AprilTag center from ground
+        
+        // Calculate distance using trigonometry
+        // distance = (tagHeight - cameraHeight) / tan(cameraAngle + ty)
+        double angleToTargetRad = Math.toRadians(CAMERA_ANGLE_DEG + ty);
+        
+        double distanceFromTY = 0.0;
+        if (Math.abs(angleToTargetRad) > 0.01) {  // Avoid division by zero
+            distanceFromTY = Math.abs((TAG_HEIGHT_MM - CAMERA_HEIGHT_MM) / Math.tan(angleToTargetRad));
+        }
+        
+        // Method 3: Use area-based estimation as fallback
+        // Formula: distance = k / sqrt(area), where k is calibration constant
+        // CALIBRATE: Measure area at known distance, then k = distance * sqrt(area)
+        final double AREA_CALIBRATION_CONSTANT = 5000.0;  // CALIBRATE THIS
+        double distanceFromArea = AREA_CALIBRATION_CONSTANT / Math.sqrt(Math.max(area, 0.0001));
+        
+        // Use TY-based distance if valid, otherwise fall back to area
+        double distance;
+        if (distanceFromTY > 100.0 && distanceFromTY < 5000.0) {
+            // TY-based distance seems reasonable
+            distance = distanceFromTY;
+            telemetry.addData("Distance Method", "TY-based: %.0f mm", distanceFromTY);
+        } else {
+            // Fall back to area-based
+            distance = distanceFromArea;
+            telemetry.addData("Distance Method", "Area-based: %.0f mm", distanceFromArea);
+        }
+        
+        telemetry.addData("TY Angle", "%.2f°", ty);
+        telemetry.addData("Target Area", "%.4f", area);
+        
         return distance;
     }
 
@@ -669,19 +708,28 @@ public class TeleOpTourney extends LinearOpMode {
 
     private double calculateLaunchVelocity(double horizontalDistance) {
         // Projectile motion: v₀ = √[g·d² / (2·cos²(θ)·(d·tan(θ) - Δy))]
-        double deltaY = TARGET_HEIGHT_ABOVE_TAG_MM - LAUNCH_HEIGHT_MM;
+        // deltaY = target height - launch height (positive means target is above launcher)
+        double deltaY = TARGET_HEIGHT_MM - LAUNCH_HEIGHT_MM;
         double cosTheta = Math.cos(LAUNCH_ANGLE_RAD);
         double tanTheta = Math.tan(LAUNCH_ANGLE_RAD);
 
         double numerator = GRAVITY_MM_S2 * horizontalDistance * horizontalDistance;
         double denominator = 2 * cosTheta * cosTheta * (horizontalDistance * tanTheta - deltaY);
 
+        // Debug telemetry for launch calculation
+        telemetry.addData("Launch deltaY", "%.1f mm (target - launcher)", deltaY);
+        telemetry.addData("Launch angle", "%.1f°", LAUNCH_ANGLE_DEG);
+        telemetry.addData("Horizontal dist", "%.1f mm", horizontalDistance);
+
         if (denominator <= 0) {
-            // Safety fallback
+            // Safety fallback - target unreachable with current angle
+            telemetry.addData("Launch calc", "FALLBACK (denominator <= 0)");
             return 3000.0; // Default velocity in mm/s
         }
 
-        return Math.sqrt(numerator / denominator);
+        double velocity = Math.sqrt(numerator / denominator);
+        telemetry.addData("Calculated velocity", "%.1f mm/s", velocity);
+        return velocity;
     }
 
     private double velocityToRPM(double velocityMmPerS) {
@@ -693,19 +741,52 @@ public class TeleOpTourney extends LinearOpMode {
     private void aimTurretAtTag(LLResultTypes.FiducialResult fiducial) {
         double tx = fiducial.getTargetXDegrees();
 
-        // Convert angle to servo position (5 turn servo = 1800° range)
-        double currentPos = spinSpinServo.getPosition();
-        double angleOffset = tx / 1800.0;
+        // Turret tracking constants for 5-turn servo with 0.0-0.2 range
+        // The 0.0-0.2 range represents ~72° of rotation (20% of 360°)
+        // This is the physical limit of the turret mechanism
+        final double TX_TOLERANCE = 2.0;        // Don't adjust if within 2 degrees
+        final double SERVO_MIN = 0.0;           // Minimum servo position
+        final double SERVO_MAX = 0.2;           // Maximum servo position (physical limit)
+        final double SERVO_CENTER = 0.1;        // Center position for turret
+        
+        // Proportional gain: 0.2 range / ~27° max TX = ~0.0074 per degree
+        // Multiplied by 2.5 for faster/more responsive tracking
+        final double BASE_GAIN = 0.005;         // Base servo units per degree of TX
+        final double GAIN_MULTIPLIER = 2.5;     // Multiplier for faster movement
+        final double PROPORTIONAL_GAIN = BASE_GAIN * GAIN_MULTIPLIER; // = 0.0125
+        final double MAX_STEP = 0.01 * GAIN_MULTIPLIER; // = 0.025 (scaled max step)
 
-        double newPos = Range.clip(currentPos + angleOffset, 0.0, 0.2);
+        // Skip if already on target
+        if (Math.abs(tx) <= TX_TOLERANCE) {
+            telemetry.addData("Turret", "ON TARGET (TX: %.1f°)", tx);
+            return;
+        }
+
+        // Calculate adjustment (negative because we move toward target, opposite of offset)
+        // TX positive = target is to the right = adjust servo position accordingly
+        // Adjust sign based on your servo mounting direction
+        double adjustment = Range.clip(-tx * PROPORTIONAL_GAIN, -MAX_STEP, MAX_STEP);
+        
+        double currentPos = spinSpinServo.getPosition();
+        double newPos = currentPos + adjustment;
+
+        // Clip to valid servo range (0.0 to 0.2)
+        newPos = Range.clip(newPos, SERVO_MIN, SERVO_MAX);
         spinSpinServo.setPosition(newPos);
+
+        telemetry.addData("Turret TX", "%.1f°", tx);
+        telemetry.addData("Turret Adjustment", "%.4f (x%.1f)", adjustment, GAIN_MULTIPLIER);
+        telemetry.addData("Turret Position", "%.3f → %.3f (range: %.1f-%.1f)", 
+                currentPos, newPos, SERVO_MIN, SERVO_MAX);
 
         sleep(300); // Allow turret to settle
     }
 
     private void setLauncherSpeed(double rpm) {
         double power = Range.clip(rpm / MAX_MOTOR_RPM, 0.0, 1.0);
-        launchMotor.setPower(-1.0 * power);
+        //launchMotor.setPower(-1.0 * power);
+        launchMotor.setPower(power);
+        sleep(1000);
     }
     /*
      Current logic of launchBalls

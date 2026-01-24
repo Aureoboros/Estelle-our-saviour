@@ -30,6 +30,12 @@ public class LimelightTurretTest extends LinearOpMode {
     private static final int TAG_24_ID = 24;
     private static final int TAG_20_ID = 20;
 
+    // Distance calculation constants (CALIBRATE THESE FOR YOUR ROBOT)
+    private static final double CAMERA_HEIGHT_MM = 200.0;  // Height of camera lens from ground
+    private static final double CAMERA_ANGLE_DEG = 0.0;    // Camera tilt angle (0 = horizontal)
+    private static final double TAG_HEIGHT_MM = 150.0;     // Height of AprilTag center from ground
+    private static final double AREA_CALIBRATION_CONSTANT = 5000.0;  // Calibration constant for area-based distance
+
     private Servo spinSpinServo;
     private Limelight3A limelight;
 
@@ -213,6 +219,11 @@ public class LimelightTurretTest extends LinearOpMode {
                     telemetry.addData("TX (horizontal)", "%.2f°", fiducial.getTargetXDegrees());
                     telemetry.addData("TY (vertical)", "%.2f°", fiducial.getTargetYDegrees());
                     telemetry.addData("Target Area", "%.4f", fiducial.getTargetArea());
+                    
+                    // Calculate and display distance
+                    double distance = calculateDistanceFromLimelight(fiducial);
+                    telemetry.addData("Distance", "%.0f mm (%.1f in)", distance, distance / 25.4);
+                    
                     // Show if this is the tag we're tracking
                     if (tagId == currentTargetTag) {
                         telemetry.addData("Status", "✓ TRACKING");
@@ -234,5 +245,48 @@ public class LimelightTurretTest extends LinearOpMode {
         telemetry.addLine("B = Toggle Track Tag 24 (Red)");
         telemetry.addLine("X = Toggle Track Tag 20 (Blue)");
         telemetry.addLine("Y = Reset to Center");
+    }
+
+    /**
+     * Calculates the distance to an AprilTag using two methods:
+     * 1. TY-based (primary): Uses vertical angle trigonometry for more accuracy
+     * 2. Area-based (fallback): Uses target area when TY method is invalid
+     * 
+     * @param fiducial The fiducial result from Limelight
+     * @return Distance to tag in millimeters
+     */
+    private double calculateDistanceFromLimelight(LLResultTypes.FiducialResult fiducial) {
+        // Method 1: Use target area (requires calibration)
+        double area = fiducial.getTargetArea();
+        
+        // Method 2: Use TY (vertical angle) for more accurate distance
+        // This uses the known height difference between camera and tag
+        double ty = fiducial.getTargetYDegrees();
+        
+        // Calculate distance using trigonometry
+        // distance = (tagHeight - cameraHeight) / tan(cameraAngle + ty)
+        double angleToTargetRad = Math.toRadians(CAMERA_ANGLE_DEG + ty);
+        
+        double distanceFromTY = 0.0;
+        if (Math.abs(angleToTargetRad) > 0.01) {  // Avoid division by zero
+            distanceFromTY = Math.abs((TAG_HEIGHT_MM - CAMERA_HEIGHT_MM) / Math.tan(angleToTargetRad));
+        }
+        
+        // Method 3: Use area-based estimation as fallback
+        // Formula: distance = k / sqrt(area), where k is calibration constant
+        // CALIBRATE: Measure area at known distance, then k = distance * sqrt(area)
+        double distanceFromArea = AREA_CALIBRATION_CONSTANT / Math.sqrt(Math.max(area, 0.0001));
+        
+        // Use TY-based distance if valid, otherwise fall back to area
+        double distance;
+        if (distanceFromTY > 100.0 && distanceFromTY < 5000.0) {
+            // TY-based distance seems reasonable
+            distance = distanceFromTY;
+        } else {
+            // Fall back to area-based
+            distance = distanceFromArea;
+        }
+        
+        return distance;
     }
 }
