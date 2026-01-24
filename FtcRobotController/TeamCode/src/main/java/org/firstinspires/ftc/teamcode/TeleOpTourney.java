@@ -765,12 +765,12 @@ public class TeleOpTourney extends LinearOpMode {
         final double SERVO_MAX = 0.5;           // Maximum servo position for 180° rotation
         final double SERVO_CENTER = 0.25;       // Center position for turret (middle of 0.0-0.5)
         
-        // Proportional gain: 0.5 range / ~27° max TX = ~0.0185 per degree
-        // Multiplied by 2.5 for faster/more responsive tracking
-        final double BASE_GAIN = 0.0125;        // Base servo units per degree of TX (scaled for 0.5 range)
-        final double GAIN_MULTIPLIER = 2.5;     // Multiplier for faster movement
-        final double PROPORTIONAL_GAIN = BASE_GAIN * GAIN_MULTIPLIER; // = 0.03125
-        final double MAX_STEP = 0.025 * GAIN_MULTIPLIER; // = 0.0625 (scaled max step for larger range)
+        // Reduced gain for gentler, more controlled turret movement
+        // 0.5 range / 180° = ~0.00278 per degree, using lower value for smooth tracking
+        final double BASE_GAIN = 0.003;         // Reduced from 0.0125 for gentler movement
+        final double GAIN_MULTIPLIER = 1.0;     // No multiplier
+        final double PROPORTIONAL_GAIN = BASE_GAIN * GAIN_MULTIPLIER; // = 0.003
+        final double MAX_STEP = 0.01;           // Reduced from 0.025 - max movement per adjustment
 
         // Skip if already on target
         if (Math.abs(tx) <= TX_TOLERANCE) {
