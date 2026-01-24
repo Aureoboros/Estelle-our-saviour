@@ -876,6 +876,9 @@ public class TeleOpTourney extends LinearOpMode {
             spatulaServo.setPosition(0.0);
             sleep(1000);
             spatulaServo.setPosition(1.0);
+            if (i == count - 1) {
+                break;
+            }
             sleep(1000);
             //while (spatulaServo.getPosition() != 1.0);
             // Close stopper
