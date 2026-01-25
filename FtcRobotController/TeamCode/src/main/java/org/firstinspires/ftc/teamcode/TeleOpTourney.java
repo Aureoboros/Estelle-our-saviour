@@ -218,6 +218,14 @@ public class TeleOpTourney extends LinearOpMode {
                     (currentGamepad2.left_bumper && !previousGamepad2.left_bumper);
             boolean rightBumperPressed = (currentGamepad1.right_bumper && !previousGamepad1.right_bumper) ||
                     (currentGamepad2.right_bumper && !previousGamepad2.right_bumper);
+            boolean dpadUpPressed = (currentGamepad1.dpad_up && !previousGamepad1.dpad_up) ||
+                    (currentGamepad2.dpad_up && !previousGamepad2.dpad_up);
+            boolean dpadDownPressed = (currentGamepad1.dpad_down && !previousGamepad1.dpad_down) ||
+                    (currentGamepad2.dpad_down && !previousGamepad2.dpad_down);
+            boolean dpadLeftPressed = (currentGamepad1.dpad_left && !previousGamepad1.dpad_left) ||
+                    (currentGamepad2.dpad_left && !previousGamepad2.dpad_left);
+            boolean dpadRightPressed = (currentGamepad1.dpad_right && !previousGamepad1.dpad_right) ||
+                    (currentGamepad2.dpad_right && !previousGamepad2.dpad_right);
 
             // ========== START BUTTON - SLOW MODE TOGGLE ==========
             if (startPressed) {
@@ -372,17 +380,19 @@ public class TeleOpTourney extends LinearOpMode {
 //                    x = 0.3;  // Strafe right
 //                    rx = 0;
 //                }
-                if (currentGamepad1.dpad_left) {
+                if (dpadLeftPressed) {
                     tagid = 20;
                 }
-                else if (currentGamepad1.dpad_right) {
+                else if (dpadRightPressed) {
                     tagid = 24;
                 }
-                if (currentGamepad1.dpad_up) {
+                if (dpadUpPressed) {
                     launchMotorPower += 0.05;
+                    launchMotorPower = Range.clip(launchMotorPower, 0.1, 1.0); // Prevent negative values
                 }
-                else if (currentGamepad1.dpad_down) {
+                else if (dpadDownPressed) {
                     launchMotorPower -= 0.05;
+                    launchMotorPower = Range.clip(launchMotorPower, 0.1, 1.0); // Prevent negative values
                 }
 
                 maxDrivePower = GAMEPAD1_MAX_POWER;
@@ -411,17 +421,19 @@ public class TeleOpTourney extends LinearOpMode {
 //                    x = 0.3;  // Strafe right
 //                    rx = 0;
 //                }
-                if (currentGamepad2.dpad_left) {
+                if (dpadLeftPressed) {
                     tagid = 20;
                 }
-                else if (currentGamepad2.dpad_right) {
+                else if (dpadRightPressed) {
                     tagid = 24;
                 }
-                if (currentGamepad2.dpad_up) {
+                if (dpadUpPressed) {
                     launchMotorPower += 0.05;
+                    launchMotorPower = Range.clip(launchMotorPower, 0.1, 1.0); // Prevent negative values
                 }
-                else if (currentGamepad2.dpad_down) {
+                else if (dpadDownPressed) {
                     launchMotorPower -= 0.05;
+                    launchMotorPower = Range.clip(launchMotorPower, 0.1, 1.0); // Prevent negative values
                 }
 
                 maxDrivePower = GAMEPAD2_MAX_POWER;
@@ -837,7 +849,7 @@ public class TeleOpTourney extends LinearOpMode {
         // Increasing servo position rotates turret RIGHT (toward positive TX)
         // Therefore: positive TX → positive adjustment (removed negative sign)
         // If turret still moves wrong direction, flip this sign back to negative
-        double adjustment = Range.clip(tx * PROPORTIONAL_GAIN, -MAX_STEP, MAX_STEP);
+        double adjustment = Range.clip(-tx * PROPORTIONAL_GAIN, -MAX_STEP, MAX_STEP);
         
         double currentPos = spinSpinServo.getPosition();
         double newPos = currentPos + adjustment;
