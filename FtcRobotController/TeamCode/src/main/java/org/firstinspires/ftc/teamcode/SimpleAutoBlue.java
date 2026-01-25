@@ -49,12 +49,11 @@ public class SimpleAutoBlue extends LinearOpMode {
         backRightMotor = hardwareMap.get(DcMotor.class, "BackRightMotor");
 
         // Initialize other motors
-        intakeMotor = hardwareMap.get(DcMotor.class, "IntakeMotor");
         launchMotor = hardwareMap.get(DcMotor.class, "LaunchMotor");
 
         stopServo = hardwareMap.get(Servo.class, "stopServo");
         spatulaServo = hardwareMap.get(Servo.class, "spatulaServo");
-        
+
         stopServo.setPosition(1.0); // Closed
         spatulaServo.setPosition(0.0); // Down
 
