@@ -22,7 +22,7 @@ public class SimpleAutoBlue extends LinearOpMode {
         frontRightMotor.setPower(FRONT_RIGHT_POWER);
         backLeftMotor.setPower(BACK_LEFT_POWER);
         backRightMotor.setPower(BACK_RIGHT_POWER);
-        sleep(100);
+        sleep(75);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
         backLeftMotor.setPower(0);
@@ -32,7 +32,7 @@ public class SimpleAutoBlue extends LinearOpMode {
         frontRightMotor.setPower(FRONT_RIGHT_POWER);
         backLeftMotor.setPower(BACK_LEFT_POWER);
         backRightMotor.setPower(BACK_RIGHT_POWER);
-        sleep(500);
+        sleep(300);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
         backLeftMotor.setPower(0);
