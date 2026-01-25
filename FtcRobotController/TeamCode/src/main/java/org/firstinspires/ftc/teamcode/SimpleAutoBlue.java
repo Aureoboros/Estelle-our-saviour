@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 @Autonomous(name="SimpleAutoBlue", group="Autonomous")
@@ -10,7 +11,7 @@ public class SimpleAutoBlue extends LinearOpMode {
     private static final double FRONT_RIGHT_POWER = 0.75;
     private static final double BACK_RIGHT_POWER = 0.75;
     private DcMotor frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor;
-    private DcMotor intakeMotor, launchMotor;
+    private DcMotor launchMotor;
     private Servo spatulaServo, stopServo;
 
 
@@ -42,15 +43,18 @@ public class SimpleAutoBlue extends LinearOpMode {
     }
     private void initializeHardware() {
         // Initialize drive motors
-        frontLeftMotor = hardwareMap.get(DcMotor.class, "frontLeftMotor");
-        backLeftMotor = hardwareMap.get(DcMotor.class, "backLeftMotor");
-        frontRightMotor = hardwareMap.get(DcMotor.class, "frontRightMotor");
-        backRightMotor = hardwareMap.get(DcMotor.class, "backRightMotor");
+        frontLeftMotor = hardwareMap.get(DcMotor.class, "FrontLeftMotor");
+        backLeftMotor = hardwareMap.get(DcMotor.class, "BackLeftMotor");
+        frontRightMotor = hardwareMap.get(DcMotor.class, "FrontRightMotor");
+        backRightMotor = hardwareMap.get(DcMotor.class, "BackRightMotor");
 
         // Initialize other motors
-        intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
-        launchMotor = hardwareMap.get(DcMotor.class, "launchMotor");
+        intakeMotor = hardwareMap.get(DcMotor.class, "IntakeMotor");
+        launchMotor = hardwareMap.get(DcMotor.class, "LaunchMotor");
 
+        stopServo = hardwareMap.get(Servo.class, "stopServo");
+        spatulaServo = hardwareMap.get(Servo.class, "spatulaServo");
+        
         stopServo.setPosition(1.0); // Closed
         spatulaServo.setPosition(0.0); // Down
 
