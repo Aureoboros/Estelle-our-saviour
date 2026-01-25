@@ -27,7 +27,7 @@ public class SimpleAutoBlue extends LinearOpMode {
         frontRightMotor.setPower(0);
         backLeftMotor.setPower(0);
         backRightMotor.setPower(0);
-        launchBalls(4);
+        launchBalls(3);
         frontLeftMotor.setPower(FRONT_LEFT_POWER);
         frontRightMotor.setPower(FRONT_RIGHT_POWER);
         backLeftMotor.setPower(BACK_LEFT_POWER);
@@ -57,7 +57,7 @@ public class SimpleAutoBlue extends LinearOpMode {
 
         stopServo.setPosition(1.0); // Closed
         spatulaServo.setPosition(1.0); // Down
-        spinSpinServo.setPosition(0.4); // Set turret to initial position
+        spinSpinServo.setPosition(0.38); // Set turret to initial position
 
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
         frontRightMotor.setDirection(DcMotor.Direction.REVERSE);
@@ -71,6 +71,8 @@ public class SimpleAutoBlue extends LinearOpMode {
         intakeMotor.setPower(-1.0);
         
         for (int i = 0; i < count; i++) {
+            spinSpinServo.setPosition(0.38);
+            launchMotor.setPower(0.95);
             // Open stopper to allow ball through
             stopServo.setPosition(1.0);
             sleep(1000);
@@ -92,6 +94,7 @@ public class SimpleAutoBlue extends LinearOpMode {
                 sleep(500); // Brief pause to allow ball to settle
             }
             launchMotor.setPower(0.95);
+            sleep(1000);
         }
         
         // Turn intake motor OFF after all balls are launched

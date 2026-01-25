@@ -151,7 +151,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         boolean found = true;
         int count = 0;
         // double spinpos = 0.25;
-        spinSpinServo.setPosition(0.3);
+        spinSpinServo.setPosition(0.32);
 //        do {
 //            spinSpinServo.setPosition(spinpos);
 //            sleep(100);
@@ -277,6 +277,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                     // Only re-apply if position has drifted significantly (more than 0.01)
                     if (lockedTurretPosition >= 0) {
                         double currentTurretPos = spinSpinServo.getPosition();
+                        currentTurretPos = Range.clip(currentTurretPos, 0.25, 0.4);
                         if (Math.abs(currentTurretPos - lockedTurretPosition) > 0.01) {
                             spinSpinServo.setPosition(lockedTurretPosition);
                             sleep(100); // Brief wait for servo to maintain position
@@ -288,7 +289,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                     // Timer expired or not active - reset and do full auto-aim
                     launchTimerStart = getRuntime();
                     inLaunchMode = true;
-                    lockedTurretPosition = -1.0; // Reset locked position
+                    lockedTurretPosition = 0.3; // Reset locked position
                     telemetry.addLine("Starting 15-second launch mode - detecting AprilTag");
                     telemetry.update();
                     autoAimAndShoot();
@@ -332,14 +333,14 @@ public class TeleOpTourneySupreme extends LinearOpMode {
 
             // ========== LEFT BUMPER - SET TURRET TO 0.135 ==========
             if (leftBumperPressed) {
-                spinSpinServo.setPosition(0.4);
+                spinSpinServo.setPosition(0.38);
                 telemetry.addLine("Turret set to 0.4");
                 telemetry.update();
             }
 
             // ========== RIGHT BUMPER - SET TURRET TO 0.08 ==========
             if (rightBumperPressed) {
-                spinSpinServo.setPosition(0.3);
+                spinSpinServo.setPosition(0.32);
                 telemetry.addLine("Turret set to 0.3");
                 telemetry.update();
             }
@@ -388,20 +389,20 @@ public class TeleOpTourneySupreme extends LinearOpMode {
 //                    x = 0.3;  // Strafe right
 //                    rx = 0;
 //                }
-                if (dpadLeftPressed) {
+                if (dpadRightPressed) {
                     // Reduce turret position by 0.01
                     double currentTurretPos = spinSpinServo.getPosition();
                     double newTurretPos = currentTurretPos - 0.01;
-                    newTurretPos = Range.clip(newTurretPos, 0.5, 0.75); // Clip to valid servo range
+                    newTurretPos = Range.clip(newTurretPos, 0.25, 0.4); // Clip to valid servo range
                     spinSpinServo.setPosition(newTurretPos);
                     telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
                     telemetry.update();
                 }
-                else if (dpadRightPressed) {
+                else if (dpadLeftPressed) {
                     // Increase turret position by 0.01
                     double currentTurretPos = spinSpinServo.getPosition();
                     double newTurretPos = currentTurretPos + 0.01;
-                    newTurretPos = Range.clip(newTurretPos, 0.5, 0.75); // Clip to valid servo range
+                    newTurretPos = Range.clip(newTurretPos, 0.25, 0.4); // Clip to valid servo range
                     spinSpinServo.setPosition(newTurretPos);
                     telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
                     telemetry.update();
@@ -441,20 +442,20 @@ public class TeleOpTourneySupreme extends LinearOpMode {
 //                    x = 0.3;  // Strafe right
 //                    rx = 0;
 //                }
-                if (dpadLeftPressed) {
+                if (dpadRightPressed) {
                     // Reduce turret position by 0.01
                     double currentTurretPos = spinSpinServo.getPosition();
                     double newTurretPos = currentTurretPos - 0.01;
-                    newTurretPos = Range.clip(newTurretPos, 0.5, 0.75); // Clip to valid servo range
+                    newTurretPos = Range.clip(newTurretPos, 0.25, 0.4); // Clip to valid servo range
                     spinSpinServo.setPosition(newTurretPos);
                     telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
                     telemetry.update();
                 }
-                else if (dpadRightPressed) {
+                else if (dpadLeftPressed) {
                     // Increase turret position by 0.01
                     double currentTurretPos = spinSpinServo.getPosition();
                     double newTurretPos = currentTurretPos + 0.01;
-                    newTurretPos = Range.clip(newTurretPos, 0.5, 0.75); // Clip to valid servo range
+                    newTurretPos = Range.clip(newTurretPos, 0.25, 0.4); // Clip to valid servo range
                     spinSpinServo.setPosition(newTurretPos);
                     telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
                     telemetry.update();
@@ -534,10 +535,10 @@ public class TeleOpTourneySupreme extends LinearOpMode {
             backRightPower = Range.clip(backRightPower, -maxDrivePower, maxDrivePower);
 
             // Set motor powers
-            frontLeftMotor.setPower(frontLeftPower/2);
-            backLeftMotor.setPower(backLeftPower/2);
-            frontRightMotor.setPower(frontRightPower/2);
-            backRightMotor.setPower(backRightPower/2);
+            frontLeftMotor.setPower(frontLeftPower);
+            backLeftMotor.setPower(backLeftPower);
+            frontRightMotor.setPower(frontRightPower);
+            backRightMotor.setPower(backRightPower);
 
             // ========== TELEMETRY ==========
             telemetry.addLine("========== DRIVE ONLY MODE ==========");
@@ -639,7 +640,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         // Initialize servo positions
         stopServo.setPosition(0.5); // Closed
         spatulaServo.setPosition(1.0); // Down
-        spinSpinServo.setPosition(0.01); // Stop the spinservo to turn too far
+        spinSpinServo.setPosition(0.3); // Stop the spinservo to turn too far
         launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
 
 
@@ -745,15 +746,17 @@ public class TeleOpTourneySupreme extends LinearOpMode {
             
             // Lock turret position - store current position and don't allow changes during launch
             lockedTurretPosition = spinSpinServo.getPosition();
+            lockedTurretPosition = Range.clip(lockedTurretPosition, 0.25, 0.4);
 
             // Set launcher speed
             launchMotor.setPower(launchMotorPower);
-            sleep(1000); // Allow launcher to spin up
+            while (!(launchMotor.getPower() < launchMotorPower)); // Allow launcher to spin up
 
             // Launch sequence - no re-aiming or turret movement between balls
             launchBalls(1);
             
             // Ensure turret stays locked at the aimed position (prevent any drift)
+            lockedTurretPosition = Range.clip(lockedTurretPosition, 0.25, 0.4);
             spinSpinServo.setPosition(lockedTurretPosition);
 
             telemetry.addData("Target Acquired", "Tag %d ", tagid);
@@ -767,7 +770,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
             telemetry.update();
             //setLauncherSpeed(MAX_MOTOR_RPM * 0.9);
             launchMotor.setPower(launchMotorPower);
-            sleep(500);
+            while (!(launchMotor.getPower() < launchMotorPower)); // Allow launcher to spin up
             launchBalls(1);
         }
 
@@ -942,9 +945,9 @@ public class TeleOpTourneySupreme extends LinearOpMode {
             sleep(1000);
             // Actuate spatula to push ball
             spatulaServo.setPosition(0.0);
-            sleep(1000);
+            sleep(500);
             spatulaServo.setPosition(1.0);
-            sleep(1000);
+            sleep(500);
             //while (spatulaServo.getPosition() != 1.0);
             // Close stopper
             //stopServo.setPosition(1.0);
@@ -1246,10 +1249,10 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         backRightPower = Range.clip(backRightPower, -0.5, 0.5);
 
 
-        frontLeftMotor.setPower(frontLeftPower/2);
-        backLeftMotor.setPower(backLeftPower/2);
-        frontRightMotor.setPower(frontRightPower/2);
-        backRightMotor.setPower(backRightPower/2);
+        frontLeftMotor.setPower(frontLeftPower);
+        backLeftMotor.setPower(backLeftPower);
+        frontRightMotor.setPower(frontRightPower);
+        backRightMotor.setPower(backRightPower);
     }
 
     // ========== ODOMETRY POD API ==========
@@ -1426,10 +1429,10 @@ public class TeleOpTourneySupreme extends LinearOpMode {
             }
 
             // Set motor powers
-            frontLeftMotor.setPower(frontLeftPower/2);
-            backLeftMotor.setPower(backLeftPower/2);
-            frontRightMotor.setPower(frontRightPower/2);
-            backRightMotor.setPower(backRightPower/2);
+            frontLeftMotor.setPower(frontLeftPower);
+            backLeftMotor.setPower(backLeftPower);
+            frontRightMotor.setPower(frontRightPower);
+            backRightMotor.setPower(backRightPower);
 
             // Update telemetry
             telemetry.addLine("--- Odo Wheel Navigation ---");
