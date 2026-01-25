@@ -391,7 +391,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                     // Reduce turret position by 0.01
                     double currentTurretPos = spinSpinServo.getPosition();
                     double newTurretPos = currentTurretPos - 0.01;
-                    newTurretPos = Range.clip(newTurretPos, 0.0, 0.25); // Clip to valid servo range
+                    newTurretPos = Range.clip(newTurretPos, 0.5, 0.75); // Clip to valid servo range
                     spinSpinServo.setPosition(newTurretPos);
                     telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
                     telemetry.update();
@@ -400,7 +400,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                     // Increase turret position by 0.01
                     double currentTurretPos = spinSpinServo.getPosition();
                     double newTurretPos = currentTurretPos + 0.01;
-                    newTurretPos = Range.clip(newTurretPos, 0.0, 0.25); // Clip to valid servo range
+                    newTurretPos = Range.clip(newTurretPos, 0.5, 0.75); // Clip to valid servo range
                     spinSpinServo.setPosition(newTurretPos);
                     telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
                     telemetry.update();
@@ -444,7 +444,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                     // Reduce turret position by 0.01
                     double currentTurretPos = spinSpinServo.getPosition();
                     double newTurretPos = currentTurretPos - 0.01;
-                    newTurretPos = Range.clip(newTurretPos, 0.0, 0.25); // Clip to valid servo range
+                    newTurretPos = Range.clip(newTurretPos, 0.5, 0.75); // Clip to valid servo range
                     spinSpinServo.setPosition(newTurretPos);
                     telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
                     telemetry.update();
@@ -453,7 +453,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                     // Increase turret position by 0.01
                     double currentTurretPos = spinSpinServo.getPosition();
                     double newTurretPos = currentTurretPos + 0.01;
-                    newTurretPos = Range.clip(newTurretPos, 0.0, 0.25); // Clip to valid servo range
+                    newTurretPos = Range.clip(newTurretPos, 0.5, 0.75); // Clip to valid servo range
                     spinSpinServo.setPosition(newTurretPos);
                     telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
                     telemetry.update();
@@ -872,9 +872,9 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         // The 0.0-0.5 range represents 180° of rotation (50% of 360°)
         // This allows full hemisphere coverage for target tracking
         final double TX_TOLERANCE = 2.0;        // Don't adjust if within 2 degrees
-        final double SERVO_MIN = 0.0;           // Minimum servo position
-        final double SERVO_MAX = 0.25;           // Maximum servo position for 180° rotation
-        final double SERVO_CENTER = 0.25;       // Center position for turret (middle of 0.0-0.5)
+        final double SERVO_MIN = 0.5;           // Minimum servo position
+        final double SERVO_MAX = 0.75;           // Maximum servo position for 180° rotation
+        final double SERVO_CENTER = 0.612;       // Center position for turret (middle of 0.0-0.5)
 
         // Reduced gain for gentler, more controlled turret movement
         // 0.5 range / 180° = ~0.00278 per degree, using lower value for smooth tracking
