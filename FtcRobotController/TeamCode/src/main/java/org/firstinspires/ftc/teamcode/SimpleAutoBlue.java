@@ -10,7 +10,7 @@ public class SimpleAutoBlue extends LinearOpMode {
     private static final double FRONT_RIGHT_POWER = 0.75;
     private static final double BACK_RIGHT_POWER = 0.75;
     private DcMotor frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor;
-    private DcMotor launchMotor;
+    private DcMotor intakeMotor, launchMotor;
     private Servo spatulaServo, stopServo;
 
 
@@ -48,6 +48,7 @@ public class SimpleAutoBlue extends LinearOpMode {
         backRightMotor = hardwareMap.get(DcMotor.class, "backRightMotor");
 
         // Initialize other motors
+        intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
         launchMotor = hardwareMap.get(DcMotor.class, "launchMotor");
 
         stopServo = hardwareMap.get(Servo.class, "stopServo");
@@ -61,12 +62,14 @@ public class SimpleAutoBlue extends LinearOpMode {
         backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
         backRightMotor.setDirection(DcMotor.Direction.REVERSE);
         launchMotor.setPower(0.8);
-        }
+    }
     private void launchBalls(int count) {
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
+            intakeMotor.setPower(1.0);
             stopServo.setPosition(0.5);
             sleep(100);
+            
 
             // Actuate spatula to push ball
             spatulaServo.setPosition(0.0);
@@ -77,7 +80,8 @@ public class SimpleAutoBlue extends LinearOpMode {
             // Close stopper
             stopServo.setPosition(1.0);
             sleep(200);
+            intakeMotor.setPower(0);
         }
     }
 
-    }
+}
