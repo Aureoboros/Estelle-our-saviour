@@ -22,7 +22,7 @@ public class SimpleAutoBlue extends LinearOpMode {
         frontRightMotor.setPower(FRONT_RIGHT_POWER);
         backLeftMotor.setPower(BACK_LEFT_POWER);
         backRightMotor.setPower(BACK_RIGHT_POWER);
-        sleep(75);
+        sleep(50);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
         backLeftMotor.setPower(0);
@@ -32,7 +32,7 @@ public class SimpleAutoBlue extends LinearOpMode {
         frontRightMotor.setPower(FRONT_RIGHT_POWER);
         backLeftMotor.setPower(BACK_LEFT_POWER);
         backRightMotor.setPower(BACK_RIGHT_POWER);
-        sleep(300);
+        sleep(200);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
         backLeftMotor.setPower(0);
@@ -64,24 +64,35 @@ public class SimpleAutoBlue extends LinearOpMode {
         launchMotor.setPower(0.8);
     }
     private void launchBalls(int count) {
+        // Turn intake motor ON in reverse direction to feed balls
+        // Negative power for reverse direction to push balls forward
+        intakeMotor.setPower(-1.0);
+        
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
-            intakeMotor.setPower(1.0);
-            stopServo.setPosition(0.5);
-            sleep(100);
+            stopServo.setPosition(1.0);
+            sleep(1000);
             
-
+            // Close stopper to stop other balls from going under the spatula
+            stopServo.setPosition(0.5);
+            sleep(1000);
+            
             // Actuate spatula to push ball
             spatulaServo.setPosition(0.0);
-            sleep(300);
+            sleep(1000);
             spatulaServo.setPosition(1.0);
-            sleep(200);
-
-            // Close stopper
-            stopServo.setPosition(1.0);
-            sleep(200);
-            intakeMotor.setPower(0);
+            sleep(1000);
+            
+            // Keep intake running between balls to feed next ball
+            // Only turn off after last ball
+            if (i < count - 1) {
+                // Keep intake running to feed next ball
+                sleep(500); // Brief pause to allow ball to settle
+            }
         }
+        
+        // Turn intake motor OFF after all balls are launched
+        intakeMotor.setPower(0);
     }
 
 }
