@@ -151,15 +151,16 @@ public class TeleOpTourney extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         initializeHardware();
 //        detectInitialPosition();
-        boolean found = false;
+        boolean found = true;
         int count = 0;
-        double spinpos = 0.05;
-        do {
-            spinSpinServo.setPosition(spinpos);
-            sleep(100);
-            found = detectInitialPosition();
-            spinpos = spinpos + 0.05;
-        } while ((!found)&&(spinpos <=0.3));
+        // double spinpos = 0.25;
+        spinSpinServo.setPosition(0.3);
+//        do {
+//            spinSpinServo.setPosition(spinpos);
+//            sleep(100);
+//            found = detectInitialPosition();
+//            spinpos = spinpos + 0.05;
+//        } while ((!found)&&(spinpos <=0.4));
 
 
         // Initialize gamepad state tracking

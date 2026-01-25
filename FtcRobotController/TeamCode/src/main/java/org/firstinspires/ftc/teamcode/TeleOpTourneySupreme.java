@@ -148,15 +148,16 @@ public class TeleOpTourneySupreme extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         initializeHardware();
 //        detectInitialPosition();
-        boolean found = false;
+        boolean found = true;
         int count = 0;
-        double spinpos = 0.05;
-        do {
-            spinSpinServo.setPosition(spinpos);
-            sleep(100);
-            found = detectInitialPosition();
-            spinpos = spinpos + 0.05;
-        } while ((!found)&&(spinpos <=0.3));
+        // double spinpos = 0.25;
+        spinSpinServo.setPosition(0.3);
+//        do {
+//            spinSpinServo.setPosition(spinpos);
+//            sleep(100);
+//            found = detectInitialPosition();
+//            spinpos = spinpos + 0.05;
+//        } while ((!found)&&(spinpos <=0.4));
 
 
         // Initialize gamepad state tracking
@@ -331,15 +332,15 @@ public class TeleOpTourneySupreme extends LinearOpMode {
 
             // ========== LEFT BUMPER - SET TURRET TO 0.135 ==========
             if (leftBumperPressed) {
-                spinSpinServo.setPosition(0.135);
-                telemetry.addLine("Turret set to 0.135");
+                spinSpinServo.setPosition(0.4);
+                telemetry.addLine("Turret set to 0.4");
                 telemetry.update();
             }
 
             // ========== RIGHT BUMPER - SET TURRET TO 0.08 ==========
             if (rightBumperPressed) {
-                spinSpinServo.setPosition(0.08);
-                telemetry.addLine("Turret set to 0.08");
+                spinSpinServo.setPosition(0.3);
+                telemetry.addLine("Turret set to 0.3");
                 telemetry.update();
             }
 

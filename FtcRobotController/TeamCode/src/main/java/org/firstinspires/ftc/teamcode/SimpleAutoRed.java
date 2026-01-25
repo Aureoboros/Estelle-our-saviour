@@ -58,7 +58,7 @@ public class SimpleAutoRed extends LinearOpMode {
 
         stopServo.setPosition(1.0); // Closed
         spatulaServo.setPosition(1.0); // Down
-        spinSpinServo.setPosition(0.92); // Set turret to initial position
+        spinSpinServo.setPosition(0.3); // Set turret to initial position
 
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
         frontRightMotor.setDirection(DcMotor.Direction.REVERSE);
