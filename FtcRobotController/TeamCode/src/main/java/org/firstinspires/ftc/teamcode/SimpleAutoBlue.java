@@ -22,7 +22,7 @@ public class SimpleAutoBlue extends LinearOpMode {
         frontRightMotor.setPower(FRONT_RIGHT_POWER);
         backLeftMotor.setPower(BACK_LEFT_POWER);
         backRightMotor.setPower(BACK_RIGHT_POWER);
-        sleep(100);
+        sleep(75);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
         backLeftMotor.setPower(0);
@@ -32,7 +32,7 @@ public class SimpleAutoBlue extends LinearOpMode {
         frontRightMotor.setPower(FRONT_RIGHT_POWER);
         backLeftMotor.setPower(BACK_LEFT_POWER);
         backRightMotor.setPower(BACK_RIGHT_POWER);
-        sleep(500);
+        sleep(300);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
         backLeftMotor.setPower(0);
@@ -65,7 +65,7 @@ public class SimpleAutoBlue extends LinearOpMode {
     private void launchBalls(int count) {
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
-            stopServo.setPosition(0.0);
+            stopServo.setPosition(0.5);
             sleep(100);
 
             // Actuate spatula to push ball
