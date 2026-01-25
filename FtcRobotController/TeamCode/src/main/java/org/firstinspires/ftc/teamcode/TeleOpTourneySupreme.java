@@ -394,9 +394,11 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                 }
                 if (currentGamepad1.dpad_up) {
                     launchMotorPower += 0.05;
+                    launchMotorPower = Range.clip(launchMotorPower, 0.1, 1.0); // Prevent negative values
                 }
                 else if (currentGamepad1.dpad_down) {
                     launchMotorPower -= 0.05;
+                    launchMotorPower = Range.clip(launchMotorPower, 0.1, 1.0); // Prevent negative values
                 }
 
                 maxDrivePower = GAMEPAD1_MAX_POWER;
@@ -433,9 +435,11 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                 }
                 if (currentGamepad1.dpad_up) {
                     launchMotorPower += 0.05;
+                    launchMotorPower = Range.clip(launchMotorPower, 0.1, 1.0); // Prevent negative values
                 }
                 else if (currentGamepad1.dpad_down) {
                     launchMotorPower -= 0.05;
+                    launchMotorPower = Range.clip(launchMotorPower, 0.1, 1.0); // Prevent negative values
                 }
 
                 maxDrivePower = GAMEPAD2_MAX_POWER;
