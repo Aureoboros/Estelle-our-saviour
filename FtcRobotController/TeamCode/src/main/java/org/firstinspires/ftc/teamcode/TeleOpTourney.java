@@ -196,6 +196,10 @@ public class TeleOpTourney extends LinearOpMode {
             //robotX = getXOdoInches() / 12;
             //robotY = getYOdoInches() / 12;
             // ARATRIKA COME BACK TO THIS >:( also written by aratrika yeah
+            
+            // Update Limelight with current IMU heading for MegaTag2 3D pose estimation
+            double imuHeadingDeg = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+            limelight.updateRobotOrientation(imuHeadingDeg);
 
             // ========== RISING EDGE DETECTION ==========
             boolean startPressed = (currentGamepad1.start && !previousGamepad1.start) ||
@@ -653,7 +657,8 @@ public class TeleOpTourney extends LinearOpMode {
     }
 
     private void autoAimAndShoot() {
-        telemetry.addLine("Auto-aiming at RED target (Tag 24)...");
+        String allianceStr = (tagid == 20) ? "BLUE" : "RED";
+        telemetry.addLine("Auto-aiming at " + allianceStr + " target (Tag " + tagid + ")...");
         telemetry.update();
 
         boolean targetAcquired = false;
