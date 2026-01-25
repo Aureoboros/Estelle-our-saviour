@@ -42,10 +42,10 @@ public class SimpleAutoBlue extends LinearOpMode {
     }
     private void initializeHardware() {
         // Initialize drive motors
-        frontLeftMotor = hardwareMap.get(DcMotor.class, "FrontLeftMotor");
-        backLeftMotor = hardwareMap.get(DcMotor.class, "BackLeftMotor");
-        frontRightMotor = hardwareMap.get(DcMotor.class, "FrontRightMotor");
-        backRightMotor = hardwareMap.get(DcMotor.class, "BackRightMotor");
+        frontLeftMotor = hardwareMap.get(DcMotor.class, "frontLeftMotor");
+        backLeftMotor = hardwareMap.get(DcMotor.class, "backLeftMotor");
+        frontRightMotor = hardwareMap.get(DcMotor.class, "frontRightMotor");
+        backRightMotor = hardwareMap.get(DcMotor.class, "backRightMotor");
 
         // Initialize other motors
         intakeMotor = hardwareMap.get(DcMotor.class, "IntakeMotor");
