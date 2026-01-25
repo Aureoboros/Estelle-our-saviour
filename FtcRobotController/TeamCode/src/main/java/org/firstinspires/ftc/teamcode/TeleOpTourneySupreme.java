@@ -329,25 +329,18 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                 }
             }
 
-            // ========== LEFT BUMPER - RESET IMU HEADING ==========
+            // ========== LEFT BUMPER - SET TURRET TO 0.135 ==========
             if (leftBumperPressed) {
-                imu.resetYaw();
-                robotHeading = 0.0;
+                spinSpinServo.setPosition(0.135);
+                telemetry.addLine("Turret set to 0.135");
+                telemetry.update();
             }
 
-            // ========== RIGHT BUMPER - SNAP TO 0° ==========
+            // ========== RIGHT BUMPER - SET TURRET TO 0.08 ==========
             if (rightBumperPressed) {
-                // Calculate rotation needed to face forward
-                double targetHeading = 0.0;
-                double currentHeading = robotHeading;
-                double headingError = targetHeading - currentHeading;
-
-                // Normalize to [-PI, PI]
-                while (headingError > Math.PI) headingError -= 2 * Math.PI;
-                while (headingError < -Math.PI) headingError += 2 * Math.PI;
-
-                // Quick snap rotation (will execute over next few loops)
-                // This just sets up for the next control cycle
+                spinSpinServo.setPosition(0.08);
+                telemetry.addLine("Turret set to 0.08");
+                telemetry.update();
             }
 
             // ========== DRIVE CONTROL ==========
@@ -395,10 +388,22 @@ public class TeleOpTourneySupreme extends LinearOpMode {
 //                    rx = 0;
 //                }
                 if (dpadLeftPressed) {
-                    tagid = 20;
+                    // Reduce turret position by 0.01
+                    double currentTurretPos = spinSpinServo.getPosition();
+                    double newTurretPos = currentTurretPos - 0.01;
+                    newTurretPos = Range.clip(newTurretPos, 0.0, 0.25); // Clip to valid servo range
+                    spinSpinServo.setPosition(newTurretPos);
+                    telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
+                    telemetry.update();
                 }
                 else if (dpadRightPressed) {
-                    tagid = 24;
+                    // Increase turret position by 0.01
+                    double currentTurretPos = spinSpinServo.getPosition();
+                    double newTurretPos = currentTurretPos + 0.01;
+                    newTurretPos = Range.clip(newTurretPos, 0.0, 0.25); // Clip to valid servo range
+                    spinSpinServo.setPosition(newTurretPos);
+                    telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
+                    telemetry.update();
                 }
                 if (dpadUpPressed) {
                     launchMotorPower += 0.05;
@@ -436,10 +441,22 @@ public class TeleOpTourneySupreme extends LinearOpMode {
 //                    rx = 0;
 //                }
                 if (dpadLeftPressed) {
-                    tagid = 20;
+                    // Reduce turret position by 0.01
+                    double currentTurretPos = spinSpinServo.getPosition();
+                    double newTurretPos = currentTurretPos - 0.01;
+                    newTurretPos = Range.clip(newTurretPos, 0.0, 0.25); // Clip to valid servo range
+                    spinSpinServo.setPosition(newTurretPos);
+                    telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
+                    telemetry.update();
                 }
                 else if (dpadRightPressed) {
-                    tagid = 24;
+                    // Increase turret position by 0.01
+                    double currentTurretPos = spinSpinServo.getPosition();
+                    double newTurretPos = currentTurretPos + 0.01;
+                    newTurretPos = Range.clip(newTurretPos, 0.0, 0.25); // Clip to valid servo range
+                    spinSpinServo.setPosition(newTurretPos);
+                    telemetry.addLine("Turret: " + String.format("%.3f", currentTurretPos) + " → " + String.format("%.3f", newTurretPos));
+                    telemetry.update();
                 }
                 if (dpadUpPressed) {
                     launchMotorPower += 0.05;
@@ -856,7 +873,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         // This allows full hemisphere coverage for target tracking
         final double TX_TOLERANCE = 2.0;        // Don't adjust if within 2 degrees
         final double SERVO_MIN = 0.0;           // Minimum servo position
-        final double SERVO_MAX = 0.5;           // Maximum servo position for 180° rotation
+        final double SERVO_MAX = 0.25;           // Maximum servo position for 180° rotation
         final double SERVO_CENTER = 0.25;       // Center position for turret (middle of 0.0-0.5)
 
         // Reduced gain for gentler, more controlled turret movement
