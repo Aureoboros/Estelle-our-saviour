@@ -71,8 +71,14 @@ public class AutoRedBackML extends LinearOpMode {
     private static final double FIELD_MIN_FEET = -6.0;
     private static final double FIELD_MAX_FEET = 6.0;
 
-    // Odometry constants
-    private static final double ODOMETRY_INCHES_PER_TICK = 0.001; // CALIBRATE THIS
+    // Odometry constants (goBILDA Odometry Pod with 35mm wheel)
+    // Calculation: (π × 1.378 inches) / 2000 CPR = 0.002164 inches per tick
+    private static final double ODOMETRY_INCHES_PER_TICK = 0.002164;
+    
+    // Drive encoder constants (REV HD Hex Motor: 537.7 CPR, ~4" mecanum wheel)
+    // Calculation: (π × 4.0 inches) / 537.7 CPR = 0.0234 inches per tick
+    private static final double DRIVE_ENCODER_INCHES_PER_TICK = (Math.PI * 4.0) / 537.7;
+    
     private static final double COUNTS_PER_MM = 1.0; // CALIBRATE THIS
 
     // Tracking
@@ -514,9 +520,10 @@ public class AutoRedBackML extends LinearOpMode {
         lastRightEncoderPos = rightPos;
         lastStrafeEncoderPos = strafePos;
 
-        double leftDist = leftDelta * ODOMETRY_INCHES_PER_TICK;
-        double rightDist = rightDelta * ODOMETRY_INCHES_PER_TICK;
-        double strafeDist = strafeDelta * ODOMETRY_INCHES_PER_TICK;
+        // Use drive encoder constant (not odometry pod constant)
+        double leftDist = leftDelta * DRIVE_ENCODER_INCHES_PER_TICK;
+        double rightDist = rightDelta * DRIVE_ENCODER_INCHES_PER_TICK;
+        double strafeDist = strafeDelta * DRIVE_ENCODER_INCHES_PER_TICK;
 
         double forwardDist = (leftDist + rightDist) / 2.0;
         double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
@@ -618,18 +625,17 @@ public class AutoRedBackML extends LinearOpMode {
     }
 
     private void intakeSpikeBalls(double spike_x, double spike_y, double angle) {
-        // spike_x and spike_y are already in INCHES (converted at call site)
-        // Convert back to FEET for driveToPosition() which expects feet
-        double spike_x_feet = spike_x / 12.0;
-        double spike_y_feet = spike_y / 12.0;
-        // angle is in DEGREES
-        driveToPosition(spike_x_feet, spike_y_feet, 0);
-        turnToAngle(Math.toRadians(-angle)); // turnToAngle expects radians
+        // spike_x and spike_y are in FEET (Red autonomous uses feet directly)
+        // angle is in DEGREES, convert to radians for driveToPosition
+        double angleRad = Math.toRadians(-angle);
+        
+        driveToPosition(spike_x, spike_y, 0);
+        turnToAngle(angleRad); // turnToAngle expects radians
         intakeMotor.setPower(INTAKE_POWER);
         // Move 24 inches (2 feet) in the +X direction for intake (Red side - mirrored from Blue)
-        driveToPosition(spike_x_feet + 2.0, spike_y_feet, Math.toRadians(-angle)); // 2.0 feet = 24 inches
+        driveToPosition(spike_x + 2.0, spike_y, angleRad); // Pass radians, not degrees
         intakeMotor.setPower(0);
-        driveToPosition(spike_x_feet, spike_y_feet, 0);
+        driveToPosition(spike_x, spike_y, 0);
     }
 
     private void turnToAngle(double targetAngle) {

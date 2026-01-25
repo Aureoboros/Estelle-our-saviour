@@ -79,6 +79,11 @@ public class TeleOpTourney extends LinearOpMode {
     // Odometry constants (goBILDA Odometry Pod with 35mm wheel)
     // Calculation: (π × 1.378 inches) / 2000 CPR = 0.002164 inches per tick
     private static final double ODOMETRY_INCHES_PER_TICK = 0.002164;
+    
+    // Drive encoder constants (REV HD Hex Motor: 537.7 CPR, ~4" mecanum wheel)
+    // Calculation: (π × 4.0 inches) / 537.7 CPR = 0.0234 inches per tick
+    private static final double DRIVE_ENCODER_INCHES_PER_TICK = (Math.PI * 4.0) / 537.7;
+    
     private static final double COUNTS_PER_MM = 1.0; // CALIBRATE THIS
 
     // Tracking
@@ -1122,10 +1127,10 @@ public class TeleOpTourney extends LinearOpMode {
         lastRightEncoderPos = rightPos;
         lastStrafeEncoderPos = strafePos;
 
-        // Convert ticks to inches
-        double leftDist = leftDelta * ODOMETRY_INCHES_PER_TICK;
-        double rightDist = rightDelta * ODOMETRY_INCHES_PER_TICK;
-        double strafeDist = strafeDelta * ODOMETRY_INCHES_PER_TICK;
+        // Convert ticks to inches - use drive encoder constant (not odo pod constant)
+        double leftDist = leftDelta * DRIVE_ENCODER_INCHES_PER_TICK;
+        double rightDist = rightDelta * DRIVE_ENCODER_INCHES_PER_TICK;
+        double strafeDist = strafeDelta * DRIVE_ENCODER_INCHES_PER_TICK;
 
         // Calculate forward and strafe movement
         double forwardDist = (leftDist + rightDist) / 2.0;

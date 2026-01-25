@@ -68,6 +68,11 @@ public class AutoBlueBackML extends LinearOpMode {
     // Odometry constants (goBILDA Odometry Pod with 35mm wheel)
     // Calculation: (π × 1.378 inches) / 2000 CPR = 0.002164 inches per tick
     private static final double ODOMETRY_INCHES_PER_TICK = 0.002164;
+    
+    // Drive encoder constants (REV HD Hex Motor: 537.7 CPR, ~4" mecanum wheel)
+    // Calculation: (π × 4.0 inches) / 537.7 CPR = 0.0234 inches per tick
+    private static final double DRIVE_ENCODER_INCHES_PER_TICK = (Math.PI * 4.0) / 537.7;
+    
     private static final double COUNTS_PER_MM = 1.0; // CALIBRATE THIS
 
     // Tracking
@@ -696,9 +701,10 @@ public class AutoBlueBackML extends LinearOpMode {
         lastRightEncoderPos = rightPos;
         lastStrafeEncoderPos = strafePos;
 
-        double leftDist = leftDelta * ODOMETRY_INCHES_PER_TICK;
-        double rightDist = rightDelta * ODOMETRY_INCHES_PER_TICK;
-        double strafeDist = strafeDelta * ODOMETRY_INCHES_PER_TICK;
+        // Use drive encoder constant (not odometry pod constant)
+        double leftDist = leftDelta * DRIVE_ENCODER_INCHES_PER_TICK;
+        double rightDist = rightDelta * DRIVE_ENCODER_INCHES_PER_TICK;
+        double strafeDist = strafeDelta * DRIVE_ENCODER_INCHES_PER_TICK;
 
         double forwardDist = (leftDist + rightDist) / 2.0;
         double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
@@ -802,12 +808,14 @@ public class AutoBlueBackML extends LinearOpMode {
     private void intakeSpikeBalls(double spike_x, double spike_y, double angle) {
         // spike_x and spike_y are already in INCHES (converted at call site)
         // driveToPositionOdoWheels expects INCHES, so use directly
-        // angle is in DEGREES
+        // angle is in DEGREES, convert to radians for turnToAngle
+        double angleRad = Math.toRadians(-angle);
+        
         driveToPositionOdoWheels(spike_x, spike_y, 0);
-        turnToAngle(Math.toRadians(-angle)); // turnToAngle expects radians
+        turnToAngle(angleRad); // turnToAngle expects radians
         intakeMotor.setPower(INTAKE_POWER);
         // Move 24 inches in the -X direction for intake (Blue side)
-        driveToPositionOdoWheels(spike_x - 24.0, spike_y, -angle); // driveToPositionOdoWheels expects degrees for heading
+        driveToPositionOdoWheels(spike_x - 24.0, spike_y, Math.toDegrees(angleRad)); // driveToPositionOdoWheels expects degrees for heading
         intakeMotor.setPower(0);
         driveToPositionOdoWheels(spike_x, spike_y, 0);
     }
