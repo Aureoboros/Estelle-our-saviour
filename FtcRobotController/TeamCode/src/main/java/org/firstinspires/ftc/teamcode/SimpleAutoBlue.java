@@ -57,9 +57,9 @@ public class SimpleAutoBlue extends LinearOpMode {
         spatulaServo.setPosition(0.0); // Down
 
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
-        frontRightMotor.setDirection(DcMotor.Direction.REVERSE);
+        frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
         backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
-        backRightMotor.setDirection(DcMotor.Direction.REVERSE);
+        backRightMotor.setDirection(DcMotor.Direction.FORWARD);
         launchMotor.setPower(0.8);
         }
     private void launchBalls(int count) {
