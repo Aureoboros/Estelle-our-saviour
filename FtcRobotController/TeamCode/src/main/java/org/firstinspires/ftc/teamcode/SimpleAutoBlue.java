@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 @Autonomous(name="SimpleAutoBlue", group="Autonomous")
@@ -43,13 +42,13 @@ public class SimpleAutoBlue extends LinearOpMode {
     }
     private void initializeHardware() {
         // Initialize drive motors
-        frontLeftMotor = hardwareMap.get(DcMotor.class, "FrontLeftMotor");
-        backLeftMotor = hardwareMap.get(DcMotor.class, "BackLeftMotor");
-        frontRightMotor = hardwareMap.get(DcMotor.class, "FrontRightMotor");
-        backRightMotor = hardwareMap.get(DcMotor.class, "BackRightMotor");
+        frontLeftMotor = hardwareMap.get(DcMotor.class, "frontLeftMotor");
+        backLeftMotor = hardwareMap.get(DcMotor.class, "backLeftMotor");
+        frontRightMotor = hardwareMap.get(DcMotor.class, "frontRightMotor");
+        backRightMotor = hardwareMap.get(DcMotor.class, "backRightMotor");
 
         // Initialize other motors
-        launchMotor = hardwareMap.get(DcMotor.class, "LaunchMotor");
+        launchMotor = hardwareMap.get(DcMotor.class, "launchMotor");
 
         stopServo = hardwareMap.get(Servo.class, "stopServo");
         spatulaServo = hardwareMap.get(Servo.class, "spatulaServo");
