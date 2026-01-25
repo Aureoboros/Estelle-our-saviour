@@ -126,6 +126,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
     private double launchTimerStart = -1.0;  // -1 means timer not active
     private static final double LAUNCH_TIMER_DURATION = 15.0;  // 15 seconds
     private boolean inLaunchMode = false;
+    private double lockedTurretPosition = -1.0;  // -1 means no position locked yet
 
     // Speed preset state
     private enum SpeedMode { SLOW, MEDIUM, FAST }
@@ -254,17 +255,32 @@ public class TeleOpTourneySupreme extends LinearOpMode {
 //                }
             }
             if (xPressed) {
-                // Check if timer is active
-                if (inLaunchMode && (getRuntime() - launchTimerStart) < LAUNCH_TIMER_DURATION) {
-                    // Timer is active - just do launch sequence without limelight
-                    telemetry.addLine("Launch mode active - launching without limelight");
+                // Check if timer has expired or is not active
+                boolean timerExpired = (launchTimerStart < 0) || 
+                                      (getRuntime() - launchTimerStart) >= LAUNCH_TIMER_DURATION;
+                
+                if (!timerExpired && inLaunchMode) {
+                    // Timer is active - just do launch sequence without limelight or re-aiming
+                    telemetry.addLine("Launch mode active - launching without re-aiming");
                     telemetry.update();
+                    
+                    // Ensure turret stays at locked position (prevent any drift)
+                    // Only re-apply if position has drifted significantly (more than 0.01)
+                    if (lockedTurretPosition >= 0) {
+                        double currentTurretPos = spinSpinServo.getPosition();
+                        if (Math.abs(currentTurretPos - lockedTurretPosition) > 0.01) {
+                            spinSpinServo.setPosition(lockedTurretPosition);
+                            sleep(100); // Brief wait for servo to maintain position
+                        }
+                    }
+                    
                     launchBalls(1);
                 } else {
-                    // Timer not active or expired - start new timer and do full auto-aim
+                    // Timer expired or not active - reset and do full auto-aim
                     launchTimerStart = getRuntime();
                     inLaunchMode = true;
-                    telemetry.addLine("Starting 15-second launch mode");
+                    lockedTurretPosition = -1.0; // Reset locked position
+                    telemetry.addLine("Starting 15-second launch mode - detecting AprilTag");
                     telemetry.update();
                     autoAimAndShoot();
                 }
@@ -661,44 +677,59 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         boolean targetAcquired = false;
         double timeout = 3.0; // 3 second timeout
         double startTime = getRuntime();
+        LLResultTypes.FiducialResult targetFiducial = null;
 
+        // First, acquire target and aim once
         while (opModeIsActive() && !targetAcquired && (getRuntime() - startTime) < timeout) {
             LLResult result = limelight.getLatestResult();
 
             if (result != null && result.isValid() && result.getFiducialResults().size() > 0) {
                 for (LLResultTypes.FiducialResult fiducial : result.getFiducialResults()) {
                     if (fiducial.getFiducialId() == tagid) {
-                        // Calculate distance using both methods
-                        double limelightDistance = calculateDistanceFromLimelight(fiducial);
-                        double odoDistance = confirmPositionWithOdometry(tagid);
-                        double finalDistance = (limelightDistance + odoDistance) / 2.0;
-
-                        // Calculate required launch velocity and RPM
-                        double requiredVelocity = calculateLaunchVelocity(finalDistance);
-                        double requiredRPM = velocityToRPM(requiredVelocity);
-
-                        // Aim turret
-                        aimTurretAtTag(fiducial);
-
-                        // Set launcher speed
-                        //setLauncherSpeed(requiredRPM);
-                        launchMotor.setPower(launchMotorPower);
-                        sleep(1000); // Allow launcher to spin up
-
-                        // Launch sequence
-                        launchBalls(1); // Launch 3 balls
-
+                        targetFiducial = fiducial;
                         targetAcquired = true;
-
-                        telemetry.addData("Target Acquired", "Tag %d ", tagid);
-                        telemetry.addData("Distance (mm)", "%.0f", finalDistance);
-                        telemetry.addData("Required RPM", "%.0f", requiredRPM);
-                        telemetry.update();
                         break;
                     }
                 }
             }
             sleep(50);
+        }
+
+        // If target acquired, aim once and launch without re-aiming
+        if (targetAcquired && targetFiducial != null) {
+            // Calculate distance using both methods
+            double limelightDistance = calculateDistanceFromLimelight(targetFiducial);
+            double odoDistance = confirmPositionWithOdometry(tagid);
+            double finalDistance = (limelightDistance + odoDistance) / 2.0;
+
+            // Calculate required launch velocity and RPM
+            double requiredVelocity = calculateLaunchVelocity(finalDistance);
+            double requiredRPM = velocityToRPM(requiredVelocity);
+
+            // Aim turret ONCE - lock position
+            // aimTurretAtTag() already includes a 300ms delay for turret to settle
+            aimTurretAtTag(targetFiducial);
+            
+            // Wait additional time for turret to fully settle after proportional adjustment
+            sleep(200); // Extra settling time
+            
+            // Lock turret position - store current position and don't allow changes during launch
+            lockedTurretPosition = spinSpinServo.getPosition();
+
+            // Set launcher speed
+            launchMotor.setPower(launchMotorPower);
+            sleep(1000); // Allow launcher to spin up
+
+            // Launch sequence - no re-aiming or turret movement between balls
+            launchBalls(1);
+            
+            // Ensure turret stays locked at the aimed position (prevent any drift)
+            spinSpinServo.setPosition(lockedTurretPosition);
+
+            telemetry.addData("Target Acquired", "Tag %d ", tagid);
+            telemetry.addData("Distance (mm)", "%.0f", finalDistance);
+            telemetry.addData("Required RPM", "%.0f", requiredRPM);
+            telemetry.update();
         }
 
         if (!targetAcquired) {
