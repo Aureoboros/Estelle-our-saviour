@@ -79,6 +79,11 @@ public class TeleOpTourneySupreme extends LinearOpMode {
     // Odometry constants (goBILDA Odometry Pod with 35mm wheel)
     // Calculation: (π × 1.378 inches) / 2000 CPR = 0.002164 inches per tick
     private static final double ODOMETRY_INCHES_PER_TICK = 0.002164;
+    
+    // Drive encoder constants (REV HD Hex Motor: 537.7 CPR, ~4" mecanum wheel)
+    // Calculation: (π × 4.0 inches) / 537.7 CPR = 0.0234 inches per tick
+    private static final double DRIVE_ENCODER_INCHES_PER_TICK = (Math.PI * 4.0) / 537.7;
+    
     private static final double COUNTS_PER_MM = 1.0; // CALIBRATE THIS
 
     // Tracking
@@ -127,7 +132,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
     private double currentPos;
 
     // Speed preset state
-    public enum SpeedMode { SLOW, MEDIUM, FAST }
+    private enum SpeedMode { SLOW, MEDIUM, FAST }
     private TeleOpTourney.SpeedMode currentSpeedMode = TeleOpTourney.SpeedMode.FAST;
 
     private double launchMotorPower = LAUNCH_MOTOR_POWER_HIGH;
@@ -141,10 +146,6 @@ public class TeleOpTourneySupreme extends LinearOpMode {
     private int togglemotorpower = 1; // Back toggles launch motor power between high & low, default high for shooting from far
 
     private int tagid = 24; //red by default
-    
-    // Auto-alignment tracking
-    private long lastAutoAlignTime = 0; // Track last auto-align timestamp
-    private static final long AUTO_ALIGN_COOLDOWN_MS = 15000; // 15 second cooldown
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -173,12 +174,12 @@ public class TeleOpTourneySupreme extends LinearOpMode {
 
         waitForStart();
         if (isStopRequested()) return;
-
+        
         // Initialize drive encoder odometry reference values AFTER position detection
         // This ensures updateDriveEncoderOdometry() calculates deltas from current position
         // rather than accumulating from encoder position 0
         initializeDriveEncoderOdometry();
-
+        
         launchMotor.setPower(LAUNCH_MOTOR_POWER_HIGH);
         intakeMotor.setPower(INTAKE_POWER);
         stopServo.setPosition(0.5);
@@ -195,6 +196,10 @@ public class TeleOpTourneySupreme extends LinearOpMode {
             //robotX = getXOdoInches() / 12;
             //robotY = getYOdoInches() / 12;
             // ARATRIKA COME BACK TO THIS >:( also written by aratrika yeah
+            
+            // Update Limelight with current IMU heading for MegaTag2 3D pose estimation
+            double imuHeadingDeg = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+            limelight.updateRobotOrientation(imuHeadingDeg);
 
             // ========== RISING EDGE DETECTION ==========
             boolean startPressed = (currentGamepad1.start && !previousGamepad1.start) ||
@@ -263,7 +268,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
 //                }
             }
             if (xPressed) {
-                //    launchBalls(1);
+            //    launchBalls(1);
                 autoAimAndShoot();
             }
 
@@ -349,14 +354,29 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                 x = currentGamepad1.right_stick_x;
                 rx = currentGamepad1.right_trigger - currentGamepad1.left_trigger;
 
-                // DPAD control for tag selection and motor power
+                // DPAD precision control (overrides joystick)
+//                if (currentGamepad1.dpad_up) {
+//                    y = -0.3;  // Forward
+//                    x = 0;
+//                    rx = 0;
+//                } else if (currentGamepad1.dpad_down) {
+//                    y = 0.3;  // Backward
+//                    x = 0;
+//                    rx = 0;
+//                } else if (currentGamepad1.dpad_left) {
+//                    y = 0;
+//                    x = -0.3;  // Strafe left
+//                    rx = 0;
+//                } else if (currentGamepad1.dpad_right) {
+//                    y = 0;
+//                    x = 0.3;  // Strafe right
+//                    rx = 0;
+//                }
                 if (currentGamepad1.dpad_left) {
                     tagid = 20;
-                    limelight.pipelineSwitch(1); // Switch to pipeline 1 for tag 20
                 }
                 else if (currentGamepad1.dpad_right) {
                     tagid = 24;
-                    limelight.pipelineSwitch(0); // Switch to pipeline 0 for tag 24
                 }
                 if (currentGamepad1.dpad_up) {
                     launchMotorPower += 0.05;
@@ -373,14 +393,29 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                 x = currentGamepad2.right_stick_x;
                 rx = currentGamepad2.right_trigger - currentGamepad2.left_trigger;
 
-                // DPAD control for tag selection and motor power
+                // DPAD precision control (overrides joystick)
+//                if (currentGamepad2.dpad_up) {
+//                    y = -0.3;  // Forward
+//                    x = 0;
+//                    rx = 0;
+//                } else if (currentGamepad2.dpad_down) {
+//                    y = 0.3;  // Backward
+//                    x = 0;
+//                    rx = 0;
+//                } else if (currentGamepad2.dpad_left) {
+//                    y = 0;
+//                    x = -0.3;  // Strafe left
+//                    rx = 0;
+//                } else if (currentGamepad2.dpad_right) {
+//                    y = 0;
+//                    x = 0.3;  // Strafe right
+//                    rx = 0;
+//                }
                 if (currentGamepad2.dpad_left) {
                     tagid = 20;
-                    limelight.pipelineSwitch(1); // Switch to pipeline 1 for tag 20
                 }
                 else if (currentGamepad2.dpad_right) {
                     tagid = 24;
-                    limelight.pipelineSwitch(0); // Switch to pipeline 0 for tag 24
                 }
                 if (currentGamepad2.dpad_up) {
                     launchMotorPower += 0.05;
@@ -542,7 +577,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         limelight.pipelineSwitch(0);  // Pipeline 0 should be configured for AprilTag 3D in Limelight web interface
         limelight.setPollRateHz(100); // Set polling rate for responsive tracking
         limelight.start();
-
+        
         // Initialize robot orientation for 3D localization
         // This should be called periodically with IMU heading for MegaTag2
         limelight.updateRobotOrientation(0.0);
@@ -622,23 +657,13 @@ public class TeleOpTourneySupreme extends LinearOpMode {
     }
 
     private void autoAimAndShoot() {
-        telemetry.addLine("Auto-aiming at target (Tag " + tagid + ")...");
+        String allianceStr = (tagid == 20) ? "BLUE" : "RED";
+        telemetry.addLine("Auto-aiming at " + allianceStr + " target (Tag " + tagid + ")...");
         telemetry.update();
 
         boolean targetAcquired = false;
         double timeout = 3.0; // 3 second timeout
         double startTime = getRuntime();
-        
-        // Check if we're in cooldown period
-        long currentTime = System.currentTimeMillis();
-        boolean shouldAlignX = (currentTime - lastAutoAlignTime) >= AUTO_ALIGN_COOLDOWN_MS;
-        
-        if (!shouldAlignX) {
-            long remainingCooldown = (AUTO_ALIGN_COOLDOWN_MS - (currentTime - lastAutoAlignTime)) / 1000;
-            telemetry.addLine("X-axis alignment on cooldown");
-            telemetry.addData("Time remaining", "%d seconds", remainingCooldown);
-            telemetry.update();
-        }
 
         while (opModeIsActive() && !targetAcquired && (getRuntime() - startTime) < timeout) {
             LLResult result = limelight.getLatestResult();
@@ -655,31 +680,22 @@ public class TeleOpTourneySupreme extends LinearOpMode {
                         double requiredVelocity = calculateLaunchVelocity(finalDistance);
                         double requiredRPM = velocityToRPM(requiredVelocity);
 
-                        // Aim turret - with X-axis alignment control
-                        aimTurretAtTag(fiducial, shouldAlignX);
-                        
-                        // Update last align time if we performed X alignment
-                        if (shouldAlignX) {
-                            lastAutoAlignTime = System.currentTimeMillis();
-                        }
+                        // Aim turret
+                        aimTurretAtTag(fiducial);
 
                         // Set launcher speed
+                        //setLauncherSpeed(requiredRPM);
                         launchMotor.setPower(launchMotorPower);
                         sleep(1000); // Allow launcher to spin up
 
                         // Launch sequence
-                        launchBalls(1); // Launch 1 ball
+                        launchBalls(1); // Launch 3 balls
 
                         targetAcquired = true;
 
-                        telemetry.addData("Target Acquired", "Tag %d", tagid);
+                        telemetry.addData("Target Acquired", "Tag %d ", tagid);
                         telemetry.addData("Distance (mm)", "%.0f", finalDistance);
                         telemetry.addData("Required RPM", "%.0f", requiredRPM);
-                        if (shouldAlignX) {
-                            telemetry.addLine("✓ X-axis aligned");
-                        } else {
-                            telemetry.addLine("○ X-axis alignment skipped (cooldown)");
-                        }
                         telemetry.update();
                         break;
                     }
@@ -691,16 +707,20 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         if (!targetAcquired) {
             telemetry.addLine("⚠ Target not found - shooting with default settings");
             telemetry.update();
+            //setLauncherSpeed(MAX_MOTOR_RPM * 0.9);
             launchMotor.setPower(launchMotorPower);
             sleep(500);
             launchBalls(1);
         }
+
+        // Stop launcher
+        //launchMotor.setPower(0);
     }
 
     private double calculateDistanceFromLimelight(LLResultTypes.FiducialResult fiducial) {
         // Method 1: Use target area (requires calibration)
         double area = fiducial.getTargetArea();
-
+        
         // Method 2: Use TY (vertical angle) for more accurate distance
         // This uses the known height difference between camera and tag
         double ty = fiducial.getTargetYDegrees();
@@ -709,22 +729,22 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         final double CAMERA_HEIGHT_MM = 330.0;  // Height of camera lens from ground
         final double CAMERA_ANGLE_DEG = 5.0;    // Camera tilt angle (positive = tilted up)
         final double TAG_HEIGHT_MM = 750.0;     // Height of AprilTag center from ground
-
+        
         // Calculate distance using trigonometry
         // distance = (tagHeight - cameraHeight) / tan(cameraAngle + ty)
         double angleToTargetRad = Math.toRadians(CAMERA_ANGLE_DEG + ty);
-
+        
         double distanceFromTY = 0.0;
         if (Math.abs(angleToTargetRad) > 0.01) {  // Avoid division by zero
             distanceFromTY = Math.abs((TAG_HEIGHT_MM - CAMERA_HEIGHT_MM) / Math.tan(angleToTargetRad));
         }
-
+        
         // Method 3: Use area-based estimation as fallback
         // Formula: distance = k / sqrt(area), where k is calibration constant
         // CALIBRATE: Measure area at known distance, then k = distance * sqrt(area)
         final double AREA_CALIBRATION_CONSTANT = 5000.0;  // CALIBRATE THIS
         double distanceFromArea = AREA_CALIBRATION_CONSTANT / Math.sqrt(Math.max(area, 0.0001));
-
+        
         // Use TY-based distance if valid, otherwise fall back to area
         double distance;
         if (distanceFromTY > 100.0 && distanceFromTY < 5000.0) {
@@ -736,10 +756,10 @@ public class TeleOpTourneySupreme extends LinearOpMode {
             distance = distanceFromArea;
             telemetry.addData("Distance Method", "Area-based: %.0f mm", distanceFromArea);
         }
-
+        
         telemetry.addData("TY Angle", "%.2f°", ty);
         telemetry.addData("Target Area", "%.4f", area);
-
+        
         return distance;
     }
 
@@ -788,78 +808,50 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         return rps * 60.0;
     }
 
-    private void aimTurretAtTag(LLResultTypes.FiducialResult fiducial, boolean alignX) {
+    private void aimTurretAtTag(LLResultTypes.FiducialResult fiducial) {
         double tx = fiducial.getTargetXDegrees();
 
-        // Turret tracking constants
-        final double TX_TOLERANCE = 0.5;        // Tighter tolerance for dead-on alignment
-        final double SERVO_MIN = 0.0;           
-        final double SERVO_MAX = 0.5;           
-        final double SERVO_CENTER = 0.25;       
+        // Turret tracking constants for 5-turn servo with 0.0-0.5 range
+        // The 0.0-0.5 range represents 180° of rotation (50% of 360°)
+        // This allows full hemisphere coverage for target tracking
+        final double TX_TOLERANCE = 2.0;        // Don't adjust if within 2 degrees
+        final double SERVO_MIN = 0.0;           // Minimum servo position
+        final double SERVO_MAX = 0.5;           // Maximum servo position for 180° rotation
+        final double SERVO_CENTER = 0.25;       // Center position for turret (middle of 0.0-0.5)
+        
+        // Reduced gain for gentler, more controlled turret movement
+        // 0.5 range / 180° = ~0.00278 per degree, using lower value for smooth tracking
+        final double BASE_GAIN = 0.003;         // Reduced from 0.0125 for gentler movement
+        final double GAIN_MULTIPLIER = 1.0;     // No multiplier
+        final double PROPORTIONAL_GAIN = BASE_GAIN * GAIN_MULTIPLIER; // = 0.003
+        final double MAX_STEP = 0.01;           // Reduced from 0.025 - max movement per adjustment
 
-        // Increased gain for more aggressive, accurate alignment
-        final double BASE_GAIN = 0.008;         // Increased from 0.003
-        final double PROPORTIONAL_GAIN = BASE_GAIN;
-        final double MAX_STEP = 0.015;          // Slightly increased max step
-
-        // Only align X-axis if allowed (first time or after cooldown)
-        if (!alignX) {
-            telemetry.addData("Turret", "SKIPPING X-ALIGN (cooldown active, TX: %.1f°)", tx);
+        // Skip if already on target
+        if (Math.abs(tx) <= TX_TOLERANCE) {
+            telemetry.addData("Turret", "ON TARGET (TX: %.1f°)", tx);
             return;
         }
 
-        // Check if already on target
-        if (Math.abs(tx) <= TX_TOLERANCE) {
-            telemetry.addData("Turret", "DEAD ON TARGET (TX: %.1f°)", tx);
-            return;
-        }
-
-        // Multi-step alignment for dead-on accuracy
-        int maxIterations = 10; // Allow multiple correction cycles
-        int iteration = 0;
+        // Calculate adjustment:
+        // TX positive = target is to the RIGHT of camera center
+        // Increasing servo position rotates turret RIGHT (toward positive TX)
+        // Therefore: positive TX → positive adjustment (removed negative sign)
+        // If turret still moves wrong direction, flip this sign back to negative
+        double adjustment = Range.clip(tx * PROPORTIONAL_GAIN, -MAX_STEP, MAX_STEP);
         
-        while (Math.abs(tx) > TX_TOLERANCE && iteration < maxIterations && opModeIsActive()) {
-            // Calculate adjustment
-            double adjustment = Range.clip(-tx * PROPORTIONAL_GAIN, -MAX_STEP, MAX_STEP);
+        double currentPos = spinSpinServo.getPosition();
+        double newPos = currentPos + adjustment;
 
-            double currentPos = spinSpinServo.getPosition();
-            double newPos = currentPos + adjustment;
+        // Clip to valid servo range (0.0 to 0.5)
+        newPos = Range.clip(newPos, SERVO_MIN, SERVO_MAX);
+        spinSpinServo.setPosition(newPos);
 
-            // Clip to valid servo range
-            newPos = Range.clip(newPos, SERVO_MIN, SERVO_MAX);
-            spinSpinServo.setPosition(newPos);
+        telemetry.addData("Turret TX", "%.1f°", tx);
+        telemetry.addData("Turret Adjustment", "%.4f (x%.1f)", adjustment, GAIN_MULTIPLIER);
+        telemetry.addData("Turret Position", "%.3f → %.3f (range: %.1f-%.1f)", 
+                currentPos, newPos, SERVO_MIN, SERVO_MAX);
 
-            telemetry.addData("Turret Align", "Iteration %d/%d", iteration + 1, maxIterations);
-            telemetry.addData("TX Error", "%.2f°", tx);
-            telemetry.addData("Adjustment", "%.4f", adjustment);
-            telemetry.addData("Position", "%.3f → %.3f", currentPos, newPos);
-            telemetry.update();
-
-            // Wait for servo to move and get fresh reading
-            sleep(200);
-            
-            // Get fresh target reading
-            LLResult result = limelight.getLatestResult();
-            if (result != null && result.isValid() && result.getFiducialResults().size() > 0) {
-                for (LLResultTypes.FiducialResult fid : result.getFiducialResults()) {
-                    if (fid.getFiducialId() == tagid) {
-                        tx = fid.getTargetXDegrees();
-                        break;
-                    }
-                }
-            }
-            
-            iteration++;
-        }
-        
-        if (Math.abs(tx) <= TX_TOLERANCE) {
-            telemetry.addLine("✓ ACHIEVED DEAD-ON ALIGNMENT");
-        } else {
-            telemetry.addData("⚠ Alignment stopped", "TX: %.2f° (close enough)", tx);
-        }
-        telemetry.update();
-        
-        sleep(300); // Final settle time
+        sleep(300); // Allow turret to settle
     }
 
     private void setLauncherSpeed(double rpm) {
@@ -896,6 +888,9 @@ public class TeleOpTourneySupreme extends LinearOpMode {
             spatulaServo.setPosition(0.0);
             sleep(1000);
             spatulaServo.setPosition(1.0);
+            if (i == count - 1) {
+                break;
+            }
             sleep(1000);
             //while (spatulaServo.getPosition() != 1.0);
             // Close stopper
@@ -915,7 +910,7 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         lastBLEncoder = backLeftMotor.getCurrentPosition();
         lastFREncoder = frontRightMotor.getCurrentPosition();
         lastBREncoder = backRightMotor.getCurrentPosition();
-
+        
         telemetry.addLine("Drive encoder odometry initialized");
         telemetry.addData("Initial robotX", "%.2f ft", robotX);
         telemetry.addData("Initial robotY", "%.2f ft", robotY);
@@ -923,3 +918,579 @@ public class TeleOpTourneySupreme extends LinearOpMode {
         telemetry.addData("BL Encoder Reference", lastBLEncoder);
         telemetry.addData("FR Encoder Reference", lastFREncoder);
         telemetry.addData("BR Encoder Reference", lastBREncoder);
+        telemetry.update();
+    }
+
+    private void updateDriveEncoderOdometry(DcMotor fl, DcMotor bl, DcMotor fr, DcMotor br, IMU imu) {
+        int currentFL = fl.getCurrentPosition();
+        int currentBL = bl.getCurrentPosition();
+        int currentFR = fr.getCurrentPosition();
+        int currentBR = br.getCurrentPosition();
+
+        int deltaFL = currentFL - lastFLEncoder;
+        int deltaBL = currentBL - lastBLEncoder;
+        int deltaFR = currentFR - lastFREncoder;
+        int deltaBR = currentBR - lastBREncoder;
+
+        double avgForward = (deltaFL + deltaBL + deltaFR + deltaBR) / 4.0;
+        double avgStrafe = (-deltaFL + deltaBL + deltaFR - deltaBR) / 4.0;
+
+        double deltaForwardInches = avgForward / COUNTS_PER_INCH;
+        double deltaStrafeInches = avgStrafe / COUNTS_PER_INCH;
+
+        robotHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
+        robotX += deltaForwardInches * Math.sin(robotHeading) + deltaStrafeInches * Math.cos(robotHeading);
+        robotY += deltaForwardInches * Math.cos(robotHeading) - deltaStrafeInches * Math.sin(robotHeading);
+
+        lastFLEncoder = currentFL;
+        lastBLEncoder = currentBL;
+        lastFREncoder = currentFR;
+        lastBREncoder = currentBR;
+    }
+
+    private double applyDeadzone(double value) {
+        return Math.abs(value) < JOYSTICK_DEADZONE ? 0 : value;
+    }
+
+
+    /**
+     * Drives the robot to a specific position on the field using wheel encoders.
+     * Uses a TWO-PHASE approach for large heading changes (>30°) to prevent oscillation:
+     * - Phase 1: Drive to target position (no heading change)
+     * - Phase 2: Rotate in place to target heading
+     *
+     * For small heading changes (≤30°), uses single-phase combined movement.
+     *
+     * @param targetX Target X position in FEET from field center
+     * @param targetY Target Y position in FEET from field center
+     * @param targetHeading Target heading in RADIANS
+     */
+    private void driveToPosition(double targetX, double targetY, double targetHeading) {
+        targetX = Range.clip(targetX, FIELD_MIN_FEET, FIELD_MAX_FEET);
+        targetY = Range.clip(targetY, FIELD_MIN_FEET, FIELD_MAX_FEET);
+
+        // Two-phase threshold: heading changes larger than this use two-phase movement
+        final double LARGE_HEADING_THRESHOLD_RAD = Math.toRadians(30.0);
+
+        if (!odometryInitialized) {
+            resetOdometryPods();
+            odometryInitialized = true;
+        }
+
+        // Get current heading to determine if we need two-phase movement
+        double currentHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+        double initialHeadingError = targetHeading - currentHeading;
+        while (initialHeadingError > Math.PI) initialHeadingError -= 2 * Math.PI;
+        while (initialHeadingError < -Math.PI) initialHeadingError += 2 * Math.PI;
+
+        boolean useTwoPhase = Math.abs(initialHeadingError) > LARGE_HEADING_THRESHOLD_RAD;
+
+        if (useTwoPhase) {
+            // TWO-PHASE MOVEMENT: First drive to position, then rotate
+            telemetry.addLine("Using TWO-PHASE movement (large heading change)");
+            telemetry.addData("Heading change", "%.1f° > 30° threshold", 
+                    Math.toDegrees(Math.abs(initialHeadingError)));
+            telemetry.update();
+
+            // Phase 1: Drive to position without heading change (70% of timeout)
+            driveToPositionPhase(targetX, targetY, currentHeading, 5.6, true, "PHASE 1: DRIVING");
+
+            // Phase 2: Rotate in place to target heading (30% of timeout)
+            driveToPositionPhase(targetX, targetY, targetHeading, 2.4, false, "PHASE 2: ROTATING");
+
+        } else {
+            // SINGLE-PHASE MOVEMENT: Combined drive and rotate
+            driveToPositionPhase(targetX, targetY, targetHeading, 8.0, false, "SINGLE-PHASE");
+        }
+
+        stopDriveMotors();
+        sleep(100);
+    }
+
+    /**
+     * Internal helper method that executes a single phase of movement for driveToPosition.
+     * Can be configured for position-only (Phase 1) or combined position+heading.
+     *
+     * @param targetX Target X position in FEET
+     * @param targetY Target Y position in FEET
+     * @param targetHeading Target heading in RADIANS
+     * @param timeout Maximum time for this phase
+     * @param positionOnlyPhase If true, skip heading correction (Phase 1)
+     * @param phaseName Name for telemetry display
+     */
+    private void driveToPositionPhase(double targetX, double targetY, double targetHeading,
+                                       double timeout, boolean positionOnlyPhase, String phaseName) {
+        double startTime = getRuntime();
+
+        while (opModeIsActive() && (getRuntime() - startTime) < timeout) {
+            // Update robot position using wheel encoder odometry (not xOdo/yOdo pods)
+            updateDriveEncoderOdometry(frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor, imu);
+            // robotX and robotY are updated inside updateDriveEncoderOdometry()
+
+
+            double deltaX = targetX - robotX;
+            double deltaY = targetY - robotY;
+            double distanceToTarget = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+            robotHeading = heading;
+
+            // Calculate heading error
+            double headingError = targetHeading - heading;
+            while (headingError > Math.PI) headingError -= 2 * Math.PI;
+            while (headingError < -Math.PI) headingError += 2 * Math.PI;
+
+            boolean positionReached = distanceToTarget * 12 < POSITION_TOLERANCE_INCHES;
+            boolean headingReached = Math.abs(headingError) < Math.toRadians(ANGLE_TOLERANCE_DEGREES);
+
+            // Check exit conditions based on phase type
+            if (positionOnlyPhase) {
+                // Phase 1: Exit when position is reached
+                if (positionReached) {
+                    stopDriveMotors();
+                    break;
+                }
+            } else {
+                // Phase 2 or Single-phase: Exit when both position AND heading are reached
+                if (positionReached && headingReached) {
+                    stopDriveMotors();
+                    break;
+                }
+            }
+
+            // Calculate drive powers
+            double x = 0.0;
+            double y = 0.0;
+            double rx = 0.0;
+
+            // Only drive if position not yet reached
+            if (!positionReached) {
+                double angleToTarget = Math.atan2(deltaX, deltaY);
+                double speed = AUTO_MAX_SPEED;
+
+                if (distanceToTarget < SLOWDOWN_DISTANCE_FEET) {
+                    double slowdownRatio = distanceToTarget / SLOWDOWN_DISTANCE_FEET;
+                    speed = AUTO_MIN_SPEED + (AUTO_MAX_SPEED - AUTO_MIN_SPEED) * slowdownRatio;
+                }
+
+                x = Math.sin(angleToTarget - heading) * speed;
+                y = Math.cos(angleToTarget - heading) * speed;
+            }
+
+            // Heading correction (skip in position-only phase)
+            if (!positionOnlyPhase && !headingReached) {
+                // Scale down rotation when far from position to prevent oscillation (single-phase only)
+                double rotationScale = 1.0;
+                if (!positionReached && distanceToTarget > 2.0) { // 2 feet = ROTATION_SCALE_DIST equivalent
+                    rotationScale = 0.2;
+                } else if (!positionReached && distanceToTarget > POSITION_TOLERANCE_INCHES / 12.0) {
+                    rotationScale = 0.2 + 0.8 * (1.0 - (distanceToTarget / 2.0));
+                }
+
+                rx = headingError * 0.5 * rotationScale;
+
+                // Apply minimum rotation power when doing pure rotation (position reached)
+                if (positionReached && Math.abs(rx) < 0.1 && !headingReached) {
+                    rx = Math.signum(rx) * 0.1;
+                }
+            }
+
+            driveFieldCentric(x, y, rx, heading);
+
+            telemetry.addLine("--- " + phaseName + " ---");
+            telemetry.addData("Target", "X: %.2f, Y: %.2f, H: %.1f°", targetX, targetY, Math.toDegrees(targetHeading));
+            telemetry.addData("Current", "X: %.2f, Y: %.2f, H: %.1f°", robotX, robotY, Math.toDegrees(heading));
+            telemetry.addData("Distance", "%.2f ft", distanceToTarget);
+            telemetry.addData("Heading Error", "%.1f°", Math.toDegrees(headingError));
+            telemetry.addData("Time remaining", "%.1f s", timeout - (getRuntime() - startTime));
+            telemetry.update();
+        }
+    }
+
+    private void resetOdometry() {
+        // Reset encoder positions - use drive motors if no dedicated odometry pods
+//        lastLeftEncoderPos = frontLeftMotor.getCurrentPosition();
+//        lastRightEncoderPos = frontRightMotor.getCurrentPosition();
+//        lastStrafeEncoderPos = backLeftMotor.getCurrentPosition();
+        // ARATRIKAAAA
+        odometryInitialized = true;
+    }
+
+    private void updateOdometryPosition() {
+        // ARATRIKA YA GOT A LOTTA WORK TO DO </3
+        // Get current encoder positions (using drive motors as odometry if no dedicated pods)
+        int leftPos = frontLeftMotor.getCurrentPosition();
+        int rightPos = frontRightMotor.getCurrentPosition();
+        int strafePos = backLeftMotor.getCurrentPosition();
+
+        // Calculate deltas
+        int leftDelta = leftPos - lastLeftEncoderPos;
+        int rightDelta = rightPos - lastRightEncoderPos;
+        int strafeDelta = strafePos - lastStrafeEncoderPos;
+
+        // Update last positions
+        lastLeftEncoderPos = leftPos;
+        lastRightEncoderPos = rightPos;
+        lastStrafeEncoderPos = strafePos;
+
+        // Convert ticks to inches - use drive encoder constant (not odo pod constant)
+        double leftDist = leftDelta * DRIVE_ENCODER_INCHES_PER_TICK;
+        double rightDist = rightDelta * DRIVE_ENCODER_INCHES_PER_TICK;
+        double strafeDist = strafeDelta * DRIVE_ENCODER_INCHES_PER_TICK;
+
+        // Calculate forward and strafe movement
+        double forwardDist = (leftDist + rightDist) / 2.0;
+
+        // Get current heading
+        double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
+        // Convert robot-relative movement to field-relative
+        double deltaXField = (forwardDist * Math.sin(heading) + strafeDist * Math.cos(heading)) / 12.0;
+        double deltaYField = (forwardDist * Math.cos(heading) - strafeDist * Math.sin(heading)) / 12.0;
+
+        // Update robot position (in feet)
+        robotX += deltaXField;
+        robotY += deltaYField;
+        robotHeading = heading;
+
+        // Clamp position to field bounds
+        robotX = Range.clip(robotX, FIELD_MIN_FEET, FIELD_MAX_FEET);
+        robotY = Range.clip(robotY, FIELD_MIN_FEET, FIELD_MAX_FEET);
+    }
+
+    private void stopDriveMotors () {
+        frontLeftMotor.setPower(0);
+        backLeftMotor.setPower(0);
+        frontRightMotor.setPower(0);
+        backRightMotor.setPower(0);
+    }
+
+    private void stopAllMotors () {
+        stopDriveMotors();
+        intakeMotor.setPower(0);
+        launchMotor.setPower(0);
+    }
+
+    private void driveFieldCentric ( double x, double y, double rx, double botHeading){
+        // Field-centric transformation
+        double rotX = x * Math.cos(-botHeading) - y * Math.sin(-botHeading);
+        double rotY = x * Math.sin(-botHeading) + y * Math.cos(-botHeading);
+
+        rotX = rotX * 1.1;  // Strafe correction
+
+        // Calculate motor powers
+        //double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+        //double frontLeftPower = (rotY + rotX + rx) / denominator;
+        //double backLeftPower = (rotY - rotX + rx) / denominator;
+        //double frontRightPower = (rotY - rotX - rx) / denominator;
+        //double backRightPower = (rotY + rotX - rx) / denominator;
+
+
+        double frontLeftPower = -rotY + rotX + rx;
+        double backLeftPower = -rotY - rotX + rx;  // Inverted y for proper strafe
+        double frontRightPower = -rotY - rotX - rx;
+        double backRightPower = -rotY + rotX - rx;  // Inverted y for proper strafe
+
+        // Find the maximum absolute power to maintain proportional relationships
+        double maxPower = Math.max(Math.abs(frontLeftPower), Math.abs(backLeftPower));
+        maxPower = Math.max(maxPower, Math.abs(frontRightPower));
+        maxPower = Math.max(maxPower, Math.abs(backRightPower));
+
+        // Scale down proportionally if any power exceeds maxDrivePower
+        // This preserves the motor power ratios while respecting the power limit
+        if (maxPower > 1.0) {
+            double scale = 1.0 / maxPower;
+            frontLeftPower *= scale;
+            backLeftPower *= scale;
+            frontRightPower *= scale;
+            backRightPower *= scale;
+        }
+
+        // Clamp all motor powers to ±0.5 to ensure they never exceed the limit
+        frontLeftPower = Range.clip(frontLeftPower, -0.5, 0.5);
+        backLeftPower = Range.clip(backLeftPower, -0.5, 0.5);
+        frontRightPower = Range.clip(frontRightPower, -0.5, 0.5);
+        backRightPower = Range.clip(backRightPower, -0.5, 0.5);
+
+
+        frontLeftMotor.setPower(frontLeftPower/2);
+        backLeftMotor.setPower(backLeftPower/2);
+        frontRightMotor.setPower(frontRightPower/2);
+        backRightMotor.setPower(backRightPower/2);
+    }
+
+    // ========== ODOMETRY POD API ==========
+
+    /**
+     * Gets the raw encoder position from the X odometry pod.
+     * Note: Value is negated to match motor connection direction.
+     * @return Current encoder tick count from xOdo (negated)
+     */
+    public int getXOdoPosition() {
+        return -xodo.getCurrentPosition();
+    }
+
+    /**
+     * Gets the raw encoder position from the Y odometry pod.
+     * @return Current encoder tick count from yOdo
+     */
+    public int getYOdoPosition() {
+        return yodo.getCurrentPosition();
+    }
+
+    /**
+     * Gets the X odometry pod position converted to inches.
+     * Note: Value is negated to match motor connection direction.
+     * @return X odometry position in inches
+     */
+    public double getXOdoInches() {
+        return -xodo.getCurrentPosition() * ODOMETRY_INCHES_PER_TICK;
+    }
+
+    /**
+     * Gets the Y odometry pod position converted to inches.
+     * @return Y odometry position in inches
+     */
+    public double getYOdoInches() {
+        return yodo.getCurrentPosition() * ODOMETRY_INCHES_PER_TICK;
+    }
+
+    /**
+     * Resets both odometry pod encoders to zero.
+     */
+    public void resetOdometryPods() {
+        xodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        yodo.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        xodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        yodo.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    }
+
+    // ========== ODOMETRY WHEEL NAVIGATION API ==========
+
+    /**
+     * Drives the robot to a specific position on the FTC 2026 field using xOdo and yOdo wheels.
+     * Uses a PID-like control loop for smooth and accurate positioning.
+     *
+     * FTC 2026 Field Coordinates:
+     * - Origin (0, 0) is at field center
+     * - X-axis: positive toward red alliance wall, negative toward blue
+     * - Y-axis: positive toward audience, negative toward scoring tables
+     * - Field size: 12ft x 12ft (-6ft to +6ft on each axis)
+     *
+     * @param targetXInches Target X position in inches from field center
+     * @param targetYInches Target Y position in inches from field center
+     * @param targetHeadingDeg Target heading in degrees (0 = forward, positive = CCW)
+     * @param maxSpeed Maximum drive speed (0.0 to 1.0)
+     * @param timeoutSeconds Maximum time to reach target before giving up
+     * @return true if position reached within tolerance, false if timed out
+     */
+    public boolean driveToPositionOdoWheels(double targetXInches, double targetYInches,
+                                            double targetHeadingDeg, double maxSpeed,
+                                            double timeoutSeconds) {
+        // Field bounds in inches (12ft x 12ft field = 144in x 144in)
+        final double FIELD_MIN_INCHES = -72.0;
+        final double FIELD_MAX_INCHES = 72.0;
+
+        // Position tolerances
+        final double POSITION_TOLERANCE = 1.0; // inches
+        final double HEADING_TOLERANCE = 2.0;  // degrees
+
+        // PID-like control gains
+        final double KP_DRIVE = 0.03;    // Proportional gain for position
+        final double KP_HEADING = 0.02;  // Proportional gain for heading
+        final double MIN_POWER = 0.15;   // Minimum power to overcome friction
+        final double SLOWDOWN_DIST = 12.0; // Start slowing down at 12 inches
+
+        // Clamp target to field bounds
+        targetXInches = Range.clip(targetXInches, FIELD_MIN_INCHES, FIELD_MAX_INCHES);
+        targetYInches = Range.clip(targetYInches, FIELD_MIN_INCHES, FIELD_MAX_INCHES);
+
+        // Convert target heading to radians
+        double targetHeadingRad = Math.toRadians(targetHeadingDeg);
+
+        // Reset odometry pods to establish current position as origin
+        resetOdometryPods();
+
+        // Calculate initial position offsets from odometry
+        double startXOdo = getXOdoInches();
+        double startYOdo = getYOdoInches();
+
+        double startTime = getRuntime();
+        boolean targetReached = false;
+
+        while (opModeIsActive() && (getRuntime() - startTime) < timeoutSeconds && !targetReached) {
+            // Read current position from odometry wheels
+            double currentXInches = getXOdoInches() - startXOdo;
+            double currentYInches = getYOdoInches() - startYOdo;
+            double currentHeadingRad = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+            double currentHeadingDeg = Math.toDegrees(currentHeadingRad);
+
+            // Calculate position errors
+            double errorX = targetXInches - currentXInches;
+            double errorY = targetYInches - currentYInches;
+            double distance = Math.sqrt(errorX * errorX + errorY * errorY);
+
+            // Calculate heading error (normalized to -180 to 180)
+            double headingError = targetHeadingDeg - currentHeadingDeg;
+            while (headingError > 180) headingError -= 360;
+            while (headingError < -180) headingError += 360;
+
+            // Check if target reached
+            if (distance < POSITION_TOLERANCE && Math.abs(headingError) < HEADING_TOLERANCE) {
+                targetReached = true;
+                break;
+            }
+
+            // Calculate drive angle in field frame
+            double angleToTarget = Math.atan2(errorX, errorY);
+
+            // Speed scaling based on distance (slow down as we approach target)
+            double speedScale = maxSpeed;
+            if (distance < SLOWDOWN_DIST) {
+                speedScale = MIN_POWER + (maxSpeed - MIN_POWER) * (distance / SLOWDOWN_DIST);
+            }
+
+            // Convert field-centric movement to robot-centric
+            double robotAngle = angleToTarget - currentHeadingRad;
+            double driveX = Math.sin(robotAngle) * speedScale * KP_DRIVE * distance;
+            double driveY = Math.cos(robotAngle) * speedScale * KP_DRIVE * distance;
+
+            // Clamp drive powers
+            driveX = Range.clip(driveX, -maxSpeed, maxSpeed);
+            driveY = Range.clip(driveY, -maxSpeed, maxSpeed);
+
+            // Apply minimum power if needed to overcome friction
+            if (distance > POSITION_TOLERANCE) {
+                if (Math.abs(driveX) < MIN_POWER && Math.abs(driveX) > 0.01) {
+                    driveX = Math.signum(driveX) * MIN_POWER;
+                }
+                if (Math.abs(driveY) < MIN_POWER && Math.abs(driveY) > 0.01) {
+                    driveY = Math.signum(driveY) * MIN_POWER;
+                }
+            }
+
+            // Heading correction
+            double rotationPower = headingError * KP_HEADING;
+            rotationPower = Range.clip(rotationPower, -maxSpeed * 0.5, maxSpeed * 0.5);
+
+            // Calculate mecanum wheel powers
+            double frontLeftPower = -driveY + driveX + rotationPower;
+            double backLeftPower = -driveY - driveX + rotationPower;
+            double frontRightPower = -driveY - driveX - rotationPower;
+            double backRightPower = -driveY + driveX - rotationPower;
+
+            // Normalize motor powers
+            double maxPower = Math.max(Math.abs(frontLeftPower), Math.abs(backLeftPower));
+            maxPower = Math.max(maxPower, Math.abs(frontRightPower));
+            maxPower = Math.max(maxPower, Math.abs(backRightPower));
+
+            if (maxPower > maxSpeed) {
+                double scale = maxSpeed / maxPower;
+                frontLeftPower *= scale;
+                backLeftPower *= scale;
+                frontRightPower *= scale;
+                backRightPower *= scale;
+            }
+
+            // Set motor powers
+            frontLeftMotor.setPower(frontLeftPower/2);
+            backLeftMotor.setPower(backLeftPower/2);
+            frontRightMotor.setPower(frontRightPower/2);
+            backRightMotor.setPower(backRightPower/2);
+
+            // Update telemetry
+            telemetry.addLine("--- Odo Wheel Navigation ---");
+            telemetry.addData("Target", "X: %.1f, Y: %.1f, H: %.1f°",
+                    targetXInches, targetYInches, targetHeadingDeg);
+            telemetry.addData("Current", "X: %.1f, Y: %.1f, H: %.1f°",
+                    currentXInches, currentYInches, currentHeadingDeg);
+            telemetry.addData("Distance", "%.2f in", distance);
+            telemetry.addData("Heading Error", "%.1f°", headingError);
+            telemetry.addData("xOdo Raw", "%d ticks", getXOdoPosition());
+            telemetry.addData("yOdo Raw", "%d ticks", getYOdoPosition());
+            telemetry.update();
+        }
+
+        // Stop all motors
+        stopDriveMotors();
+
+        return targetReached;
+    }
+
+    /**
+     * Simplified version: drives to position with default speed and timeout.
+     * @param targetXInches Target X position in inches from field center
+     * @param targetYInches Target Y position in inches from field center
+     * @return true if position reached, false if timed out
+     */
+    public boolean driveToPositionOdoWheels(double targetXInches, double targetYInches) {
+        return driveToPositionOdoWheels(targetXInches, targetYInches, 0.0, 0.5, 5.0);
+    }
+
+    /**
+     * Version with heading control and default speed/timeout.
+     * @param targetXInches Target X position in inches from field center
+     * @param targetYInches Target Y position in inches from field center
+     * @param targetHeadingDeg Target heading in degrees
+     * @return true if position reached, false if timed out
+     */
+    public boolean driveToPositionOdoWheels(double targetXInches, double targetYInches,
+                                            double targetHeadingDeg) {
+        return driveToPositionOdoWheels(targetXInches, targetYInches, targetHeadingDeg, 0.5, 5.0);
+    }
+
+    /**
+     * Drives to a named field position for FTC 2026 DECODE season.
+     * Predefined positions are relative to field center.
+     *
+     * @param positionName One of: "RED_LOWER_SPIKE", "RED_MIDDLE_SPIKE", "RED_TOP_SPIKE",
+     *                     "RED_SHOOT", "OBELISK", "RED_START", "CENTER"
+     * @return true if position reached, false if timed out or invalid position
+     */
+    public boolean driveToFieldPosition(String positionName) {
+        double targetX, targetY;
+
+        switch (positionName.toUpperCase()) {
+            case "RED_LOWER_SPIKE":
+                targetX = RED_LOWER_SPIKE_X * 12.0;  // Convert feet to inches
+                targetY = RED_LOWER_SPIKE_Y * 12.0;
+                break;
+            case "RED_MIDDLE_SPIKE":
+                targetX = RED_MIDDLE_SPIKE_X * 12.0;
+                targetY = RED_MIDDLE_SPIKE_Y * 12.0;
+                break;
+            case "RED_TOP_SPIKE":
+                targetX = RED_TOP_SPIKE_X * 12.0;
+                targetY = RED_TOP_SPIKE_Y * 12.0;
+                break;
+            case "RED_SHOOT":
+                targetX = RED_SHOOT_X * 12.0;
+                targetY = RED_SHOOT_Y * 12.0;
+                break;
+            case "OBELISK":
+                targetX = OBELISK_X * 12.0;
+                targetY = OBELISK_Y * 12.0;
+                break;
+            case "RED_START":
+                targetX = RED_DEFAULT_START_X * 12.0;
+                targetY = RED_DEFAULT_START_Y * 12.0;
+                break;
+            case "CENTER":
+                targetX = 0.0;
+                targetY = 0.0;
+                break;
+            default:
+                telemetry.addData("Error", "Unknown position: %s", positionName);
+                telemetry.update();
+                return false;
+        }
+
+        telemetry.addData("Navigating to", positionName);
+        telemetry.addData("Target", "X: %.1f in, Y: %.1f in", targetX, targetY);
+        telemetry.update();
+
+        return driveToPositionOdoWheels(targetX, targetY);
+    }
+
+}
