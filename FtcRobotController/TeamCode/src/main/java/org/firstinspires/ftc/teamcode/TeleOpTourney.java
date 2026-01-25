@@ -832,10 +832,12 @@ public class TeleOpTourney extends LinearOpMode {
             return;
         }
 
-        // Calculate adjustment (negative because we move toward target, opposite of offset)
-        // TX positive = target is to the right = adjust servo position accordingly
-        // Adjust sign based on your servo mounting direction
-        double adjustment = Range.clip(-tx * PROPORTIONAL_GAIN, -MAX_STEP, MAX_STEP);
+        // Calculate adjustment:
+        // TX positive = target is to the RIGHT of camera center
+        // Increasing servo position rotates turret RIGHT (toward positive TX)
+        // Therefore: positive TX → positive adjustment (removed negative sign)
+        // If turret still moves wrong direction, flip this sign back to negative
+        double adjustment = Range.clip(tx * PROPORTIONAL_GAIN, -MAX_STEP, MAX_STEP);
         
         double currentPos = spinSpinServo.getPosition();
         double newPos = currentPos + adjustment;
