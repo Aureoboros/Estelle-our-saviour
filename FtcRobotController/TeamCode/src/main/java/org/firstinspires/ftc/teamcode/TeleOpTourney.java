@@ -132,7 +132,7 @@ public class TeleOpTourney extends LinearOpMode {
     private double currentPos;
 
     // Speed preset state
-    private enum SpeedMode { SLOW, MEDIUM, FAST }
+    enum SpeedMode { SLOW, MEDIUM, FAST }
     private TeleOpTourney.SpeedMode currentSpeedMode = TeleOpTourney.SpeedMode.FAST;
 
     private double launchMotorPower = LAUNCH_MOTOR_POWER_HIGH;
