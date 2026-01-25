@@ -65,7 +65,7 @@ public class SimpleAutoBlue extends LinearOpMode {
     private void launchBalls(int count) {
         for (int i = 0; i < count; i++) {
             // Open stopper to allow ball through
-            stopServo.setPosition(0.0);
+            stopServo.setPosition(0.5);
             sleep(100);
 
             // Actuate spatula to push ball
