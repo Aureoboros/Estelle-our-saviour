@@ -54,7 +54,7 @@ public class SimpleAutoBlue extends LinearOpMode {
         spatulaServo = hardwareMap.get(Servo.class, "spatulaServo");
 
         stopServo.setPosition(1.0); // Closed
-        spatulaServo.setPosition(0.0); // Down
+        spatulaServo.setPosition(1.0); // Down
 
         frontLeftMotor.setDirection(DcMotor.Direction.FORWARD);
         frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
@@ -69,9 +69,9 @@ public class SimpleAutoBlue extends LinearOpMode {
             sleep(100);
 
             // Actuate spatula to push ball
-            spatulaServo.setPosition(1.0);
-            sleep(300);
             spatulaServo.setPosition(0.0);
+            sleep(300);
+            spatulaServo.setPosition(1.0);
             sleep(200);
 
             // Close stopper
