@@ -11,7 +11,7 @@ public class SimpleAutoBlue extends LinearOpMode {
     private static final double BACK_RIGHT_POWER = 0.75;
     private DcMotor frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor;
     private DcMotor intakeMotor, launchMotor;
-    private Servo spatulaServo, stopServo;
+    private Servo spatulaServo, stopServo, spinSpinServo;
 
 
     public void runOpMode() throws InterruptedException {
@@ -27,12 +27,12 @@ public class SimpleAutoBlue extends LinearOpMode {
         frontRightMotor.setPower(0);
         backLeftMotor.setPower(0);
         backRightMotor.setPower(0);
-        launchBalls(3);
+        launchBalls(4);
         frontLeftMotor.setPower(FRONT_LEFT_POWER);
         frontRightMotor.setPower(FRONT_RIGHT_POWER);
         backLeftMotor.setPower(BACK_LEFT_POWER);
         backRightMotor.setPower(BACK_RIGHT_POWER);
-        sleep(200);
+        sleep(300);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
         backLeftMotor.setPower(0);
@@ -53,15 +53,17 @@ public class SimpleAutoBlue extends LinearOpMode {
 
         stopServo = hardwareMap.get(Servo.class, "stopServo");
         spatulaServo = hardwareMap.get(Servo.class, "spatulaServo");
+        spinSpinServo = hardwareMap.get(Servo.class, "spinSpinServo");
 
         stopServo.setPosition(1.0); // Closed
         spatulaServo.setPosition(1.0); // Down
+        spinSpinServo.setPosition(0.135); // Set turret to initial position
 
         frontLeftMotor.setDirection(DcMotor.Direction.FORWARD);
         frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
         backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
         backRightMotor.setDirection(DcMotor.Direction.REVERSE);
-        launchMotor.setPower(0.8);
+        launchMotor.setPower(0.9);
     }
     private void launchBalls(int count) {
         // Turn intake motor ON in reverse direction to feed balls
@@ -89,6 +91,7 @@ public class SimpleAutoBlue extends LinearOpMode {
                 // Keep intake running to feed next ball
                 sleep(500); // Brief pause to allow ball to settle
             }
+            launchMotor.setPower(0.95);
         }
         
         // Turn intake motor OFF after all balls are launched
